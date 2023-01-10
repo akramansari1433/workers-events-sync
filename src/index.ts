@@ -1,21 +1,16 @@
+import { Router } from "itty-router";
 export interface Env {
-   // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
    EventsList: KVNamespace;
 }
 
 export default {
-   async fetch(
-      request: Request,
-      env: Env,
-      ctx: ExecutionContext
-   ): Promise<Response> {
+   async fetch(request: Request, env: Env) {
+      const router = Router();
       const getCache = (key: string) => env.EventsList.get(key);
       const setCache = (key: string, data: any) =>
          env.EventsList.put(key, data);
 
-      const url = new URL(request.url);
-
-      if (url.pathname === "/users" && request.method === "GET") {
+      router.get("/users", async () => {
          let status;
          const query = `query getUser{
 			users{
@@ -39,10 +34,13 @@ export default {
             status = response.status;
             return response.json();
          });
+
+         const data = await response;
          await setCache(
             "data",
             JSON.stringify(
                {
+                  key: "data",
                   request: {
                      url,
                      ...fetchObject,
@@ -50,19 +48,42 @@ export default {
                   },
                   response: {
                      status,
-                     response,
+                     response: data,
                   },
                },
                null,
                2
             )
          );
-         return new Response(JSON.stringify(response, null, 2));
-      } else if (url.pathname === "/events" && request.method === "GET") {
-         const data = await getCache("data");
-         return new Response(data);
-      } else {
-         return new Response("Hello World!");
-      }
+         return new Response(JSON.stringify(data, null, 2));
+      });
+
+      router.get("/events", async () => {
+         let data = [];
+         const keys = (await env.EventsList.list()).keys;
+         const values: any[] = await Promise.all(
+            keys.map(async (key) => data.push(await getCache(key.name)))
+         );
+
+         return new Response(data, {
+            headers: { "Content-Type": "application/json" },
+         });
+      });
+
+      router.get("/events/:id", async ({ params }) => {
+         const { id } = params;
+         const data = await getCache(id);
+         return new Response(data ? data : JSON.stringify({}));
+      });
+
+      router.all(
+         "*",
+         () =>
+            new Response("Not Found.", {
+               status: 404,
+            })
+      );
+
+      return router.handle(request);
    },
 };

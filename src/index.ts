@@ -38,34 +38,31 @@ export default {
          const data = await response;
          await setCache(
             "data",
-            JSON.stringify(
-               {
-                  key: "data",
-                  request: {
-                     url,
-                     ...fetchObject,
-                     body: JSON.parse(fetchObject.body),
-                  },
-                  response: {
-                     status,
-                     response: data,
-                  },
+            JSON.stringify({
+               key: "data",
+               request: {
+                  url,
+                  ...fetchObject,
+                  body: JSON.parse(fetchObject.body),
                },
-               null,
-               2
-            )
+               response: {
+                  status,
+                  response: data,
+               },
+            })
          );
          return new Response(JSON.stringify(data, null, 2));
       });
 
       router.get("/events", async () => {
-         let data = [];
          const keys = (await env.EventsList.list()).keys;
          const values: any[] = await Promise.all(
-            keys.map(async (key) => data.push(await getCache(key.name)))
+            keys.map(async (key) => await getCache(key.name))
          );
 
-         return new Response(data, {
+         const data = values.map((value) => JSON.parse(value));
+
+         return new Response(JSON.stringify(data, null, 2), {
             headers: { "Content-Type": "application/json" },
          });
       });

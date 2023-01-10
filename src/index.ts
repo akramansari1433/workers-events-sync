@@ -3,6 +3,13 @@ export interface Env {
    EventsList: KVNamespace;
 }
 
+export const corsHeaders = {
+   "Access-Control-Allow-Origin": "*",
+   "Access-Control-Allow-Methods": "GET, PUT, POST,DELETE",
+   "Access-Control-Max-Age": "86400",
+   "Content-Type": "application/json",
+};
+
 export default {
    async fetch(request: Request, env: Env) {
       const router = Router();
@@ -36,10 +43,12 @@ export default {
          });
 
          const data = await response;
+
+         let key = Math.floor(Math.random() * 100 + 1);
          await setCache(
-            "data",
+            "ID" + key,
             JSON.stringify({
-               key: "data",
+               key: "ID" + key,
                request: {
                   url,
                   ...fetchObject,
@@ -51,7 +60,9 @@ export default {
                },
             })
          );
-         return new Response(JSON.stringify(data, null, 2));
+         return new Response(JSON.stringify(data, null, 2), {
+            headers: { ...corsHeaders },
+         });
       });
 
       router.get("/events", async () => {
@@ -63,14 +74,16 @@ export default {
          const data = values.map((value) => JSON.parse(value));
 
          return new Response(JSON.stringify(data, null, 2), {
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders },
          });
       });
 
       router.get("/events/:id", async ({ params }) => {
          const { id } = params;
          const data = await getCache(id);
-         return new Response(data ? data : JSON.stringify({}));
+         return new Response(data ? data : JSON.stringify({}), {
+            headers: { ...corsHeaders },
+         });
       });
 
       router.all(

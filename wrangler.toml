@@ -1,0 +1,6 @@
+name = "workers-middleware"
+main = "src/index.ts"
+compatibility_date = "2023-01-09"
+kv_namespaces = [
+   { binding = "EventsList", id = "1b93e2af21a24e6e9d7db39bb393f7e2", preview_id = "29c2c577ab5e4897bc264d72cccbeeba" }
+]

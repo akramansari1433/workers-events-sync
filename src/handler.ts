@@ -11,23 +11,12 @@ const router = Router();
 
 router.get("/users", async (request, env) => {
    let status;
-   const query = `query getUser{
-			users{
-			  id
-			  name
-			  email
-			  created_at
-			}
-		  }`;
-   const url = "https://major-honeybee-52.hasura.app/v1/graphql";
+   const url = "https://lingering-haze-67b1.star-lord.workers.dev/api/users";
    const fetchObject = {
-      method: "POST",
+      method: "GET",
       headers: {
          "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-         query,
-      }),
    };
    const response = await fetch(url, fetchObject).then((response) => {
       status = response.status;
@@ -44,7 +33,6 @@ router.get("/users", async (request, env) => {
          request: {
             url,
             ...fetchObject,
-            body: JSON.parse(fetchObject.body),
          },
          response: {
             status,
@@ -52,7 +40,7 @@ router.get("/users", async (request, env) => {
          },
       })
    );
-   return new Response(JSON.stringify(data, null, 2), {
+   return Response.json(data, {
       headers: { ...corsHeaders },
    });
 });
@@ -65,7 +53,7 @@ router.get("/events", async (request, env) => {
 
    const data = values.map((value) => JSON.parse(value));
 
-   return new Response(JSON.stringify(data, null, 2), {
+   return Response.json(data, {
       headers: { ...corsHeaders },
    });
 });
@@ -73,7 +61,46 @@ router.get("/events", async (request, env) => {
 router.get("/events/:id", async (request, env) => {
    const { id } = request.params;
    const data = await env.EventsList.get(id);
-   return new Response(data ? data : JSON.stringify({}), {
+   return Response.json(data ? JSON.parse(data) : {}, {
+      headers: { ...corsHeaders },
+   });
+});
+
+router.post("/users", async (request, env) => {
+   const body = await request.json();
+   let status;
+   const url = "https://lingering-haze-67b1.star-lord.workers.dev/api/users";
+   const fetchObject = {
+      method: "POST",
+      headers: {
+         "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+   };
+   const response = await fetch(url, fetchObject).then((response) => {
+      status = response.status;
+      return response.json();
+   });
+
+   const data = await response;
+   let key = Math.floor(Math.random() * 100 + 1);
+   await env.EventsList.put(
+      "ID" + key,
+      JSON.stringify({
+         key: "ID" + key,
+         request: {
+            url,
+            ...fetchObject,
+            body: JSON.parse(fetchObject.body),
+         },
+         response: {
+            status,
+            response: data,
+         },
+      })
+   );
+
+   return Response.json(data, {
       headers: { ...corsHeaders },
    });
 });

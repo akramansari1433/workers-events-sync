@@ -8,39 +8,66 @@ export const corsHeaders = {
 };
 
 const router = Router();
+const configs = {
+   customerId: "e4fecf1f-4372-443e-b5d3-a7f69b769fd3",
+   endpoints: [
+      {
+         url: "https://lingering-haze-67b1.star-lord.workers.dev/api/users",
+         credentails: {
+            username: "test",
+            password: "test",
+         },
+      },
+      {
+         url: "https://data.sync-machine.workers.dev/api/users",
+         credentails: {
+            username: "test",
+            password: "test",
+         },
+      },
+   ],
+};
 
 router.get("/users", async (request, env) => {
-   let status;
-   const url = "https://lingering-haze-67b1.star-lord.workers.dev/api/users";
    const fetchObject = {
       method: "GET",
       headers: {
          "Content-Type": "application/json",
       },
    };
-   const response = await fetch(url, fetchObject).then((response) => {
-      status = response.status;
-      return response.json();
-   });
+   const responseArray: any[] = await Promise.all(
+      configs.endpoints.map(async (endpoint) => {
+         let status;
+         const response = await fetch(endpoint.url, fetchObject).then(
+            (response) => {
+               status = response.status;
+               return response.json();
+            }
+         );
+         const data = await response;
 
-   const data = await response;
-
-   let key = Math.floor(Math.random() * 100 + 1);
-   await env.EventsList.put(
-      "ID" + key,
-      JSON.stringify({
-         key: "ID" + key,
-         request: {
-            url,
-            ...fetchObject,
-         },
-         response: {
-            status,
+         let key = Math.floor(Math.random() * 100 + 1);
+         await env.EventsList.put(
+            configs.customerId + ":" + key,
+            JSON.stringify({
+               key: configs.customerId + ":" + key,
+               request: {
+                  url: endpoint.url,
+                  ...fetchObject,
+               },
+               response: {
+                  status,
+                  response: data,
+               },
+            })
+         );
+         return {
+            endpoint: endpoint.url,
             response: data,
-         },
+         };
       })
    );
-   return Response.json(data, {
+   return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });
 });
@@ -75,53 +102,6 @@ router.post("/users", async (request, env) => {
       },
       body: JSON.stringify(body),
    };
-
-   const configs = {
-      customerId: "e4fecf1f-4372-443e-b5d3-a7f69b769fd3",
-      endpoints: [
-         {
-            url: "https://lingering-haze-67b1.star-lord.workers.dev/api/users",
-            credentails: {
-               username: "test",
-               password: "test",
-            },
-         },
-         {
-            url: "https://data.sync-machine.workers.dev/api/users",
-            credentails: {
-               username: "test",
-               password: "test",
-            },
-         },
-      ],
-   };
-   //       const response = await fetch(endpoint.url, fetchObject).then(
-   //          (response) => {
-   //             console.log("status", response.status);
-   //             return response.json();
-   //          }
-   //       );
-   //       const data = await response;
-   //       console.log("data", JSON.stringify(data));
-   //       return data;
-
-   //       //   let key = Math.floor(Math.random() * 100 + 1);
-   //       //   await env.EventsList.put(
-   //       //      configs.customerId + key,
-   //       //      JSON.stringify({
-   //       //         key: "ID" + key,
-   //       //         request: {
-   //       //            url: endpoint.url,
-   //       //            ...fetchObject,
-   //       //            body: JSON.parse(fetchObject.body),
-   //       //         },
-   //       //         response: {
-   //       //            status,
-   //       //            response: await response,
-   //       //         },
-   //       //      })
-   //       //   );
-   //    });
 
    const responseArray: any[] = await Promise.all(
       configs.endpoints.map(async (endpoint) => {

@@ -1,4 +1,5 @@
 import { Router } from "itty-router";
+import { v4 as uuidv4 } from "uuid";
 
 export const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
@@ -46,11 +47,11 @@ router.get("/users", async (request, env) => {
          );
          const data = await response;
 
-         let key = Math.floor(Math.random() * 100 + 1);
+         let key = uuidv4();
          await env.EventsList.put(
-            configs.customerId + ":" + key,
+            key,
             JSON.stringify({
-               key: configs.customerId + ":" + key,
+               key,
                request: {
                   url: endpoint.url,
                   ...fetchObject,
@@ -114,11 +115,11 @@ router.post("/users", async (request, env) => {
          );
          const data = await response;
 
-         let key = Math.floor(Math.random() * 100 + 1);
+         let key = uuidv4();
          await env.EventsList.put(
-            configs.customerId + ":" + key,
+            key,
             JSON.stringify({
-               key: configs.customerId + ":" + key,
+               key,
                request: {
                   url: endpoint.url,
                   ...fetchObject,

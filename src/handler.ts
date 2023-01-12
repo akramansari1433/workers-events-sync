@@ -90,7 +90,7 @@ router.get("/events", async (request, env) => {
 router.get("/events/:key/:eventId", async (request, env) => {
    const { key, eventId } = request.params;
    const data = JSON.parse(await env.EventsList.get(key));
-   const responseData = data.filter((req: any) => req.id == eventId);
+   const responseData = data.events.filter((req: any) => req.id == eventId);
    return Response.json(data ? responseData : {}, {
       headers: { ...corsHeaders },
    });

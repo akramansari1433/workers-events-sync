@@ -182,8 +182,8 @@ router.post("/users", async (request, env) => {
 
 router.post("/headers", async (request, env) => {
    const body = await request.json();
-   await env.EventsList.put("headers", JSON.stringify(body));
-   const headers: {} = JSON.parse(await env.EventsList.get("headers"));
+   await env.Configs.put("headers", JSON.stringify(body));
+   const headers: {} = JSON.parse(await env.Configs.get("headers"));
    return Response.json(
       { meassge: "Headers added", success: true, headers },
       { headers: { ...corsHeaders } }
@@ -191,7 +191,7 @@ router.post("/headers", async (request, env) => {
 });
 
 router.get("/headers", async (request, env) => {
-   const headers: {} = JSON.parse(await env.EventsList.get("headers"));
+   const headers: {} = JSON.parse(await env.Configs.get("headers"));
    return Response.json({ headers }, { headers: { ...corsHeaders } });
 });
 
@@ -203,9 +203,9 @@ router.post("/retryconfig", async (request, env) => {
          { headers: { ...corsHeaders } }
       );
    }
-   await env.EventsList.put("retryconfig", JSON.stringify(body));
+   await env.Configs.put("retryconfig", JSON.stringify(body));
    const retryconfig: RetryConfigType = JSON.parse(
-      await env.EventsList.get("retryconfig")
+      await env.Configs.get("retryconfig")
    );
    return Response.json(
       { meassge: "Retry config added", success: true, retryconfig },
@@ -215,7 +215,7 @@ router.post("/retryconfig", async (request, env) => {
 
 router.get("/retryconfig", async (request, env) => {
    const retryconfig: RetryConfigType = JSON.parse(
-      await env.EventsList.get("retryconfig")
+      await env.Configs.get("retryconfig")
    );
    return Response.json({ retryconfig }, { headers: { ...corsHeaders } });
 });

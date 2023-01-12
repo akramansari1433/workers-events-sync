@@ -1,6 +1,12 @@
 import { Router } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
 
+type RetryConfigType = {
+   NumberOfRetries: number;
+   RetryInterval: number;
+   Timeout: number;
+};
+
 export const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
    "Access-Control-Allow-Methods": "GET, PUT, POST,DELETE",
@@ -141,6 +147,46 @@ router.post("/users", async (request, env) => {
    return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });
+});
+
+router.post("/headers", async (request, env) => {
+   const body = await request.json();
+   await env.EventsList.put("headers", JSON.stringify(body));
+   const headers: {} = JSON.parse(await env.EventsList.get("headers"));
+   return Response.json(
+      { meassge: "Headers added", success: true, headers },
+      { headers: { ...corsHeaders } }
+   );
+});
+
+router.get("/headers", async (request, env) => {
+   const headers: {} = JSON.parse(await env.EventsList.get("headers"));
+   return Response.json({ headers }, { headers: { ...corsHeaders } });
+});
+
+router.post("/retryconfig", async (request, env) => {
+   const body: RetryConfigType = await request.json();
+   if (!body.NumberOfRetries || !body.RetryInterval || !body.Timeout) {
+      return Response.json(
+         { error: true, message: "Invalid retry config" },
+         { headers: { ...corsHeaders } }
+      );
+   }
+   await env.EventsList.put("retryconfig", JSON.stringify(body));
+   const retryconfig: RetryConfigType = JSON.parse(
+      await env.EventsList.get("retryconfig")
+   );
+   return Response.json(
+      { meassge: "Retry config added", success: true, retryconfig },
+      { headers: { ...corsHeaders } }
+   );
+});
+
+router.get("/retryconfig", async (request, env) => {
+   const retryconfig: RetryConfigType = JSON.parse(
+      await env.EventsList.get("retryconfig")
+   );
+   return Response.json({ retryconfig }, { headers: { ...corsHeaders } });
 });
 
 router.all(

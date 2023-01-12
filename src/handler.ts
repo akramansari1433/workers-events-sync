@@ -14,14 +14,14 @@ const configs = {
    endpoints: [
       {
          url: "https://lingering-haze-67b1.star-lord.workers.dev/api/users",
-         credentails: {
+         credentials: {
             username: "test",
             password: "test",
          },
       },
       {
          url: "https://data.sync-machine.workers.dev/api/users",
-         credentails: {
+         credentials: {
             username: "test",
             password: "test",
          },
@@ -36,8 +36,11 @@ router.get("/users", async (request, env) => {
          "Content-Type": "application/json",
       },
    };
+
+   let responseData: any[] = [];
+   const key = uuidv4();
    const responseArray: any[] = await Promise.all(
-      configs.endpoints.map(async (endpoint) => {
+      configs.endpoints.map(async (endpoint, i) => {
          let status;
          const response = await fetch(endpoint.url, fetchObject).then(
             (response) => {
@@ -46,28 +49,26 @@ router.get("/users", async (request, env) => {
             }
          );
          const data = await response;
-
-         let key = uuidv4();
-         await env.EventsList.put(
+         responseData.push({
+            id: i,
             key,
-            JSON.stringify({
-               key,
-               request: {
-                  url: endpoint.url,
-                  ...fetchObject,
-               },
-               response: {
-                  status,
-                  response: data,
-               },
-            })
-         );
+            request: {
+               url: endpoint.url,
+               ...fetchObject,
+            },
+            response: {
+               status,
+               response: data,
+            },
+         });
+
          return {
             endpoint: endpoint.url,
             response: data,
          };
       })
    );
+   await env.EventsList.put(key, JSON.stringify(responseData));
    return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });
@@ -86,10 +87,11 @@ router.get("/events", async (request, env) => {
    });
 });
 
-router.get("/events/:id", async (request, env) => {
-   const { id } = request.params;
-   const data = await env.EventsList.get(id);
-   return Response.json(data ? JSON.parse(data) : {}, {
+router.get("/events/:key/:eventId", async (request, env) => {
+   const { key, eventId } = request.params;
+   const data = JSON.parse(await env.EventsList.get(key));
+   const responseData = data.filter((req: any) => req.id == eventId);
+   return Response.json(data ? responseData : {}, {
       headers: { ...corsHeaders },
    });
 });
@@ -104,8 +106,10 @@ router.post("/users", async (request, env) => {
       body: JSON.stringify(body),
    };
 
+   let responseData: any[] = [];
+   const key = uuidv4();
    const responseArray: any[] = await Promise.all(
-      configs.endpoints.map(async (endpoint) => {
+      configs.endpoints.map(async (endpoint, i) => {
          let status;
          const response = await fetch(endpoint.url, fetchObject).then(
             (response) => {
@@ -114,30 +118,26 @@ router.post("/users", async (request, env) => {
             }
          );
          const data = await response;
-
-         let key = uuidv4();
-         await env.EventsList.put(
+         responseData.push({
+            id: i,
             key,
-            JSON.stringify({
-               key,
-               request: {
-                  url: endpoint.url,
-                  ...fetchObject,
-                  body: JSON.parse(fetchObject.body),
-               },
-               response: {
-                  status,
-                  response: data,
-               },
-            })
-         );
+            request: {
+               url: endpoint.url,
+               ...fetchObject,
+               body: JSON.parse(fetchObject.body),
+            },
+            response: {
+               status,
+               response: data,
+            },
+         });
          return {
             endpoint: endpoint.url,
             response: data,
          };
       })
    );
-
+   await env.EventsList.put(key, JSON.stringify(responseData));
    return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });

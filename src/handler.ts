@@ -7,6 +7,35 @@ type RetryConfigType = {
    Timeout: number;
 };
 
+type Event = {
+   id: number;
+   key: string;
+   request: {
+      url: string;
+      method: string;
+      headers: any;
+      body?: any;
+   };
+   response: {
+      status?: number;
+      response: any;
+   };
+};
+
+type ResponseType = {
+   endpoint: string;
+   response: any;
+};
+
+type EventsType = {
+   key: string;
+   events: Event[];
+};
+
+type Keys = {
+   name: string;
+};
+
 export const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
    "Access-Control-Allow-Methods": "GET, PUT, POST,DELETE",
@@ -43,9 +72,9 @@ router.get("/users", async (request, env) => {
       },
    };
 
-   let responseData: any[] = [];
+   let responseData: Event[] = [];
    const key = uuidv4();
-   const responseArray: any[] = await Promise.all(
+   const responseArray: ResponseType[] = await Promise.all(
       configs.endpoints.map(async (endpoint, i) => {
          let status;
          const response = await fetch(endpoint.url, fetchObject).then(
@@ -81,12 +110,12 @@ router.get("/users", async (request, env) => {
 });
 
 router.get("/events", async (request, env) => {
-   const keys: any[] = (await env.EventsList.list()).keys;
-   const values: any[] = await Promise.all(
+   const keys: Keys[] = (await env.EventsList.list()).keys;
+   const values: string[] = await Promise.all(
       keys.map(async (key) => await env.EventsList.get(key.name))
    );
 
-   const data = values.map((value) => JSON.parse(value));
+   const data: EventsType[] = values.map((value) => JSON.parse(value));
 
    return Response.json(data, {
       headers: { ...corsHeaders },
@@ -96,7 +125,9 @@ router.get("/events", async (request, env) => {
 router.get("/events/:key/:eventId", async (request, env) => {
    const { key, eventId } = request.params;
    const data = JSON.parse(await env.EventsList.get(key));
-   const responseData = data.events.filter((req: any) => req.id == eventId);
+   const responseData: Event[] = data.events.filter(
+      (event: Event) => event.id === Number(eventId)
+   );
    return Response.json(data ? responseData : {}, {
       headers: { ...corsHeaders },
    });
@@ -112,9 +143,9 @@ router.post("/users", async (request, env) => {
       body: JSON.stringify(body),
    };
 
-   let responseData: any[] = [];
+   let responseData: Event[] = [];
    const key = uuidv4();
-   const responseArray: any[] = await Promise.all(
+   const responseArray: ResponseType[] = await Promise.all(
       configs.endpoints.map(async (endpoint, i) => {
          let status;
          const response = await fetch(endpoint.url, fetchObject).then(

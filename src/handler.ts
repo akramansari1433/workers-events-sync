@@ -68,7 +68,7 @@ router.get("/users", async (request, env) => {
          };
       })
    );
-   await env.EventsList.put(key, JSON.stringify(responseData));
+   await env.EventsList.put(key, JSON.stringify({ key, events: responseData }));
    return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });
@@ -137,7 +137,7 @@ router.post("/users", async (request, env) => {
          };
       })
    );
-   await env.EventsList.put(key, JSON.stringify(responseData));
+   await env.EventsList.put(key, JSON.stringify({ key, events: responseData }));
    return Response.json(responseArray, {
       headers: { ...corsHeaders },
    });

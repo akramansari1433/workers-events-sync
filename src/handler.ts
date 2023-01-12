@@ -8,7 +8,7 @@ type RetryConfigType = {
 };
 
 type Event = {
-   id: number;
+   id: string;
    key: string;
    request: {
       url: string;
@@ -85,7 +85,7 @@ router.get("/users", async (request, env) => {
          );
          const data = await response;
          responseData.push({
-            id: i,
+            id: uuidv4(),
             key,
             request: {
                url: endpoint.url,
@@ -126,7 +126,7 @@ router.get("/events/:key/:eventId", async (request, env) => {
    const { key, eventId } = request.params;
    const data = JSON.parse(await env.EventsList.get(key));
    const responseData: Event[] = data.events.filter(
-      (event: Event) => event.id === Number(eventId)
+      (event: Event) => event.id === eventId
    );
    return Response.json(data ? responseData : {}, {
       headers: { ...corsHeaders },
@@ -156,7 +156,7 @@ router.post("/users", async (request, env) => {
          );
          const data = await response;
          responseData.push({
-            id: i,
+            id: uuidv4(),
             key,
             request: {
                url: endpoint.url,
@@ -218,6 +218,58 @@ router.get("/retryconfig", async (request, env) => {
       await env.Configs.get("retryconfig")
    );
    return Response.json({ retryconfig }, { headers: { ...corsHeaders } });
+});
+
+router.post("/request/resend", async (request, env) => {
+   const body: {
+      customerId: string;
+      requestId: string;
+      customHeader: boolean;
+   } = await request.json();
+
+   let event: EventsType = JSON.parse(
+      await env.EventsList.get(body.customerId)
+   );
+   const req = event.events.find((req) => req.id === body.requestId);
+   if (req) {
+      let status;
+      let headers = { ...req.request.headers };
+      const customHeaders = JSON.parse(await env.Configs.get("headers"));
+      if (body.customHeader) {
+         headers = {
+            ...headers,
+            ...customHeaders,
+         };
+      }
+      const response = await fetch(req.request.url, {
+         method: req.request.method,
+         body: req.request.body,
+         headers,
+      }).then((response) => {
+         status = response.status;
+         return response.json();
+      });
+      const data = await response;
+      event.events.push({
+         id: uuidv4(),
+         key: body.customerId,
+         request: {
+            url: req.request.url,
+            method: req.request.method,
+            headers,
+            body: req.request.body,
+         },
+         response: {
+            status,
+            response: data,
+         },
+      });
+   }
+
+   await env.EventsList.put(body.customerId, JSON.stringify(event));
+   return Response.json(event, {
+      headers: { ...corsHeaders },
+   });
 });
 
 router.all(

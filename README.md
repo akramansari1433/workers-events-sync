@@ -1,1 +1,1 @@
-# workers-events-sync
+# workers-events

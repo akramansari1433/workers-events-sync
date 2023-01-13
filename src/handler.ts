@@ -2,9 +2,9 @@ import { Router } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
 
 type RetryConfigType = {
-    numberOfRetries: number;
-    retryInterval: number;
-    timeout: number;
+    NumberOfRetries: number;
+    RetryInterval: number;
+    Timeout: number;
 };
 
 type ResquestType = {
@@ -40,6 +40,19 @@ type Keys = {
     name: string;
 };
 
+interface Endpoint {
+    url: string;
+    credentials: {
+        username: string;
+        password: string;
+    }
+}
+
+interface Configs {
+    customerId: string;
+    endpoints: Endpoint[];
+}
+
 export const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, PUT, POST,DELETE",
@@ -48,8 +61,9 @@ export const corsHeaders = {
 };
 
 const router = Router();
+
 const configs = {
-    customerId: "e4fecf1f-4372-443e-b5d3-a7f69b769fd3",
+    customerId: "e5fecf1f-4372-443e-b5d3-a7f69b769fd3",
     endpoints: [
         {
             url: "https://lingering-haze-67b1.star-lord.workers.dev/api/users",
@@ -67,6 +81,82 @@ const configs = {
         },
     ],
 };
+
+router.post('/api/sync', async (request, env) => {
+    const retryConfig: RetryConfigType = JSON.parse(await env.Configs.get("retryconfig"));
+
+    const body = await request.json();
+    
+    const requestResponse: { endpoint: string, request: any, response?: any, error?: any, tries?: number, eventId?: string, requestId?: string, createdAt?: string }[] = [];
+
+    const eventId = uuidv4();
+
+    const callEndpoint = async (endpoint: Endpoint, index: number): Promise<any> => {
+        let retryCount = 0;
+        while (retryCount < retryConfig?.NumberOfRetries) {
+            const requestOptions = {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+            };
+            try {
+                const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.Timeout))]);
+                if (response.ok) {
+                    console.log("Index 1 ===> ", index);
+                    const body = await response.json();
+                    requestResponse.push({ endpoint: endpoint.url, request: requestOptions, response: body, tries: retryCount + 1, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                    return {
+                        endpoint: endpoint.url,
+                        response: body,
+                    };
+                } else {
+                    const body = await response.json();
+                    console.log("Index 2 ===> ", index);
+                    if(requestResponse.length >= index+1) {
+                        requestResponse[index].response = body;
+                        requestResponse[index].tries = retryCount + 1;
+                    } else {
+                        requestResponse.push({ endpoint: endpoint.url, request: requestOptions, response: body, tries: retryCount+1, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                    }
+                    throw new Error(`Failed to fetch from ${endpoint.url}. Status: ${response.status}`);
+                }
+            } catch (error: any) {
+                if (error.message === 'timeout') {
+                    throw error;
+                }
+                retryCount++;
+                console.log(`Retrying ${endpoint.url} (${retryCount}/${retryConfig?.NumberOfRetries})`);
+                if(retryCount < retryConfig?.NumberOfRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryConfig?.RetryInterval));
+                } else {
+                    return error
+                }
+            }
+        }
+    };
+    
+    const results = await Promise.all(configs.endpoints.map((endpoint, i) => callEndpoint(endpoint, i)));
+
+    await env.EventsList.put(
+        eventId,
+        JSON.stringify({
+            customerId: configs.customerId,
+            eventId,
+            requests: requestResponse,
+            updatedAt: new Date().toISOString(),
+            tries: 1,
+        })
+    );
+
+    console.log("response ===> ", requestResponse[0]);
+   
+    return Response.json({results,requestResponse }, {
+        headers: { ...corsHeaders },
+    });
+    
+});
 
 router.get("/users", async (request, env) => {
     const fetchObject = {
@@ -149,6 +239,9 @@ router.get("/events/:eventId/:requestId", async (request, env) => {
 
 router.post("/users", async (request, env) => {
     const body = await request.json();
+
+    const retryConfig: RetryConfigType = JSON.parse(await env.Configs.get("retryconfig"));
+
     const fetchObject = {
         method: "POST",
         headers: {
@@ -162,6 +255,7 @@ router.post("/users", async (request, env) => {
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {
             let status;
+                
             const response = await fetch(endpoint.url, fetchObject).then(
                 (response) => {
                     status = response.status;
@@ -187,9 +281,11 @@ router.post("/users", async (request, env) => {
                 endpoint: endpoint.url,
                 response: data,
             };
+            
         })
     );
-    await env.EventsList.put(
+
+    const res = await env.EventsList.put(
         eventId,
         JSON.stringify({
             customerId: configs.customerId,
@@ -199,6 +295,7 @@ router.post("/users", async (request, env) => {
             tries: 1,
         })
     );
+
     return Response.json(responseArray, {
         headers: { ...corsHeaders },
     });
@@ -221,7 +318,7 @@ router.get("/headers", async (request, env) => {
 
 router.post("/retryconfig", async (request, env) => {
     const body: RetryConfigType = await request.json();
-    if (!body.numberOfRetries || !body.retryInterval || !body.timeout) {
+    if (!body.NumberOfRetries || !body.RetryInterval || !body.Timeout) {
         return Response.json(
             { error: true, message: "Invalid retry config" },
             { headers: { ...corsHeaders } }

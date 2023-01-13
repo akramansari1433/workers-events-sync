@@ -104,7 +104,6 @@ router.post('/api/sync', async (request, env) => {
             try {
                 const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.timeout))]);
                 if (response.ok) {
-                    console.log("Index 1 ===> ", index);
                     const body = await response.json();
                     requestResponse.push({ endpoint: endpoint.url, request: requestOptions, response: body, tries: retryCount + 1, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
                     return {
@@ -113,7 +112,6 @@ router.post('/api/sync', async (request, env) => {
                     };
                 } else {
                     const body = await response.json();
-                    console.log("Index 2 ===> ", index);
                     if(requestResponse.length >= index+1) {
                         requestResponse[index].response = body;
                         requestResponse[index].tries = retryCount + 1;
@@ -149,10 +147,8 @@ router.post('/api/sync', async (request, env) => {
             tries: 1,
         })
     );
-
-    console.log("response ===> ", requestResponse[0]);
    
-    return Response.json({results,requestResponse }, {
+    return Response.json(results, {
         headers: { ...corsHeaders },
     });
     

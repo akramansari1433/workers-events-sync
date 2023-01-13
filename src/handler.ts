@@ -2,9 +2,9 @@ import { Router } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
 
 type RetryConfigType = {
-    NumberOfRetries: number;
-    RetryInterval: number;
-    Timeout: number;
+    numberOfRetries: number;
+    retryInterval: number;
+    timeout: number;
 };
 
 type ResquestType = {
@@ -93,7 +93,7 @@ router.post('/api/sync', async (request, env) => {
 
     const callEndpoint = async (endpoint: Endpoint, index: number): Promise<any> => {
         let retryCount = 0;
-        while (retryCount < retryConfig?.NumberOfRetries) {
+        while (retryCount < retryConfig?.numberOfRetries) {
             const requestOptions = {
                 method: "POST",
                 headers: {
@@ -102,7 +102,7 @@ router.post('/api/sync', async (request, env) => {
                 body: JSON.stringify(body),
             };
             try {
-                const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.Timeout))]);
+                const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.timeout))]);
                 if (response.ok) {
                     console.log("Index 1 ===> ", index);
                     const body = await response.json();
@@ -127,9 +127,9 @@ router.post('/api/sync', async (request, env) => {
                     throw error;
                 }
                 retryCount++;
-                console.log(`Retrying ${endpoint.url} (${retryCount}/${retryConfig?.NumberOfRetries})`);
-                if(retryCount < retryConfig?.NumberOfRetries) {
-                    await new Promise(resolve => setTimeout(resolve, retryConfig?.RetryInterval));
+                console.log(`Retrying ${endpoint.url} (${retryCount}/${retryConfig?.numberOfRetries})`);
+                if(retryCount < retryConfig?.numberOfRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryConfig?.retryInterval));
                 } else {
                     return error
                 }
@@ -318,7 +318,7 @@ router.get("/headers", async (request, env) => {
 
 router.post("/retryconfig", async (request, env) => {
     const body: RetryConfigType = await request.json();
-    if (!body.NumberOfRetries || !body.RetryInterval || !body.Timeout) {
+    if (!body.numberOfRetries || !body.retryInterval || !body.timeout) {
         return Response.json(
             { error: true, message: "Invalid retry config" },
             { headers: { ...corsHeaders } }

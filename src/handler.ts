@@ -136,11 +136,11 @@ router.get("/events", async (request, env) => {
     });
 });
 
-router.get("/events/:key/:eventId", async (request, env) => {
-    const { key, eventId } = request.params;
-    const data = JSON.parse(await env.EventsList.get(key));
-    const responseData: ResquestType[] = data.events.filter(
-        (event: ResquestType) => event.eventId === eventId
+router.get("/events/:eventId/:requestId", async (request, env) => {
+    const { eventId, requestId } = request.params;
+    const data: EventType = JSON.parse(await env.EventsList.get(eventId));
+    const responseData: ResquestType | undefined = data.requests.find(
+        (req: ResquestType) => req.requestId === requestId
     );
     return Response.json(data ? responseData : {}, {
         headers: { ...corsHeaders },

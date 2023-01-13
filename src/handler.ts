@@ -7,11 +7,11 @@ type RetryConfigType = {
     timeout: number;
 };
 
-type Event = {
-    id: string;
-    key: string;
+type ResquestType = {
+    requestId: string;
+    eventId: string;
     request: {
-        url: string;
+        endpoint: string;
         method: string;
         headers: any;
         body?: any;
@@ -20,6 +20,7 @@ type Event = {
         status?: number;
         response: any;
     };
+    createdAt: string;
 };
 
 type ResponseType = {
@@ -27,9 +28,12 @@ type ResponseType = {
     response: any;
 };
 
-type EventsType = {
-    key: string;
-    events: Event[];
+type EventType = {
+    eventId: string;
+    customerId: string;
+    requests: ResquestType[];
+    updatedAt: string;
+    tries?: number;
 };
 
 type Keys = {
@@ -72,8 +76,8 @@ router.get("/users", async (request, env) => {
         },
     };
 
-    let responseData: Event[] = [];
-    const key = uuidv4();
+    let requestsData: ResquestType[] = [];
+    const eventId = uuidv4();
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {
             let status;
@@ -84,17 +88,18 @@ router.get("/users", async (request, env) => {
                 }
             );
             const data = await response;
-            responseData.push({
-                id: uuidv4(),
-                key,
+            requestsData.push({
+                requestId: uuidv4(),
+                eventId,
                 request: {
-                    url: endpoint.url,
+                    endpoint: endpoint.url,
                     ...fetchObject,
                 },
                 response: {
                     status,
                     response: data,
                 },
+                createdAt: new Date().toISOString(),
             });
 
             return {
@@ -104,8 +109,14 @@ router.get("/users", async (request, env) => {
         })
     );
     await env.EventsList.put(
-        key,
-        JSON.stringify({ key, events: responseData })
+        eventId,
+        JSON.stringify({
+            customerId: configs.customerId,
+            eventId,
+            requests: requestsData,
+            updatedAt: new Date().toISOString(),
+            tries: 1,
+        })
     );
     return Response.json(responseArray, {
         headers: { ...corsHeaders },
@@ -118,7 +129,7 @@ router.get("/events", async (request, env) => {
         keys.map(async (key) => await env.EventsList.get(key.name))
     );
 
-    const data: EventsType[] = values.map((value) => JSON.parse(value));
+    const data: EventType[] = values.map((value) => JSON.parse(value));
 
     return Response.json(data, {
         headers: { ...corsHeaders },
@@ -128,8 +139,8 @@ router.get("/events", async (request, env) => {
 router.get("/events/:key/:eventId", async (request, env) => {
     const { key, eventId } = request.params;
     const data = JSON.parse(await env.EventsList.get(key));
-    const responseData: Event[] = data.events.filter(
-        (event: Event) => event.id === eventId
+    const responseData: ResquestType[] = data.events.filter(
+        (event: ResquestType) => event.eventId === eventId
     );
     return Response.json(data ? responseData : {}, {
         headers: { ...corsHeaders },
@@ -146,8 +157,8 @@ router.post("/users", async (request, env) => {
         body: JSON.stringify(body),
     };
 
-    let responseData: Event[] = [];
-    const key = uuidv4();
+    let requestData: ResquestType[] = [];
+    const eventId = uuidv4();
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {
             let status;
@@ -158,11 +169,11 @@ router.post("/users", async (request, env) => {
                 }
             );
             const data = await response;
-            responseData.push({
-                id: uuidv4(),
-                key,
+            requestData.push({
+                requestId: uuidv4(),
+                eventId,
                 request: {
-                    url: endpoint.url,
+                    endpoint: endpoint.url,
                     ...fetchObject,
                     body: JSON.parse(fetchObject.body),
                 },
@@ -170,6 +181,7 @@ router.post("/users", async (request, env) => {
                     status,
                     response: data,
                 },
+                createdAt: new Date().toISOString(),
             });
             return {
                 endpoint: endpoint.url,
@@ -178,8 +190,14 @@ router.post("/users", async (request, env) => {
         })
     );
     await env.EventsList.put(
-        key,
-        JSON.stringify({ key, events: responseData })
+        eventId,
+        JSON.stringify({
+            customerId: configs.customerId,
+            eventId,
+            requests: requestData,
+            updatedAt: new Date().toISOString(),
+            tries: 1,
+        })
     );
     return Response.json(responseArray, {
         headers: { ...corsHeaders },
@@ -228,15 +246,13 @@ router.get("/retryconfig", async (request, env) => {
 
 router.post("/request/resend", async (request, env) => {
     const body: {
-        customerId: string;
+        eventId: string;
         requestId: string;
         customHeader: boolean;
     } = await request.json();
 
-    let event: EventsType = JSON.parse(
-        await env.EventsList.get(body.customerId)
-    );
-    const req = event.events.find((req) => req.id === body.requestId);
+    let event: EventType = JSON.parse(await env.EventsList.get(body.eventId));
+    const req = event.requests.find((req) => req.requestId === body.requestId);
     if (req) {
         let status;
         let headers = { ...req.request.headers };
@@ -247,7 +263,7 @@ router.post("/request/resend", async (request, env) => {
                 ...customHeaders,
             };
         }
-        const response = await fetch(req.request.url, {
+        const response = await fetch(req.request.endpoint, {
             method: req.request.method,
             body: req.request.body,
             headers,
@@ -256,11 +272,11 @@ router.post("/request/resend", async (request, env) => {
             return response.json();
         });
         const data = await response;
-        event.events.push({
-            id: uuidv4(),
-            key: body.customerId,
+        event.requests.push({
+            requestId: uuidv4(),
+            eventId: body.eventId,
             request: {
-                url: req.request.url,
+                endpoint: req.request.endpoint,
                 method: req.request.method,
                 headers,
                 body: req.request.body,
@@ -269,10 +285,12 @@ router.post("/request/resend", async (request, env) => {
                 status,
                 response: data,
             },
+            createdAt: new Date().toISOString(),
         });
     }
-
-    await env.EventsList.put(body.customerId, JSON.stringify(event));
+    event.updatedAt = new Date().toISOString();
+    event.tries = 1;
+    await env.EventsList.put(body.eventId, JSON.stringify(event));
     return Response.json(event, {
         headers: { ...corsHeaders },
     });

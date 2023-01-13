@@ -107,18 +107,46 @@ router.post('/api/sync', async (request, env) => {
                 const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.timeout))]);
                 if (response.ok) {
                     const res = await response.json();
-                    requestResponse.push({ request: { endpoint: endpoint.url, tries: retryCount + 1,  ...requestOptions}, response: { response: res, status: response.status }, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                    requestResponse.push({ 
+                        requestId: uuidv4(), 
+                        eventId, 
+                        request: { 
+                            endpoint: endpoint.url, 
+                            tries: retryCount + 1,  
+                            ...requestOptions,
+                        }, 
+                        response: { 
+                            response: res, 
+                            status: res.status 
+                        }, 
+                        createdAt: new Date().toISOString()
+                    });
                     return {
                         endpoint: endpoint.url,
                         response: body,
                     };
                 } else {
                     const res = await response.json();
+                    console.log("response", res);
                     if(requestResponse.length >= index+1) {
-                        requestResponse[index].response = body;
+                        requestResponse[index].response = {
+                            ...res
+                        };
                         requestResponse[index].request.tries = retryCount + 1;
                     } else {
-                        requestResponse.push({ request: { endpoint: endpoint.url, tries: retryCount + 1,  ...requestOptions}, response: res, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                        requestResponse.push({ 
+                            requestId: uuidv4(), 
+                            eventId, 
+                            request: { 
+                                endpoint: endpoint.url, 
+                                tries: retryCount + 1,  
+                                ...requestOptions
+                            }, 
+                            response: { 
+                                ...res
+                            }, 
+                            createdAt: new Date().toISOString()
+                        });
                     }
                     throw new Error(`Failed to fetch from ${endpoint.url}. Status: ${response.status}`);
                 }
@@ -150,7 +178,7 @@ router.post('/api/sync', async (request, env) => {
         })
     );
    
-    return Response.json(results, {
+    return Response.json({results, requestResponse }, {
         headers: { ...corsHeaders },
     });
     

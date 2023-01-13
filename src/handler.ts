@@ -7,7 +7,7 @@ type RetryConfigType = {
     timeout: number;
 };
 
-type ResquestType = {
+type RequestType = {
     requestId: string;
     eventId: string;
     request: {
@@ -15,6 +15,7 @@ type ResquestType = {
         method: string;
         headers: any;
         body?: any;
+        tries?: number;
     };
     response: {
         status?: number;
@@ -31,7 +32,7 @@ type ResponseType = {
 type EventType = {
     eventId: string;
     customerId: string;
-    requests: ResquestType[];
+    requests: RequestType[];
     updatedAt: string;
     tries?: number;
 };
@@ -87,7 +88,8 @@ router.post('/api/sync', async (request, env) => {
 
     const body = await request.json();
     
-    const requestResponse: { endpoint: string, request: any, response?: any, error?: any, tries?: number, eventId?: string, requestId?: string, createdAt?: string }[] = [];
+    // const requestResponse: { endpoint: string, request: any, response?: any, error?: any, tries?: number, eventId?: string, requestId?: string, createdAt?: string }[] = [];
+    const requestResponse: RequestType[] = [];
 
     const eventId = uuidv4();
 
@@ -104,19 +106,19 @@ router.post('/api/sync', async (request, env) => {
             try {
                 const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.timeout))]);
                 if (response.ok) {
-                    const body = await response.json();
-                    requestResponse.push({ endpoint: endpoint.url, request: requestOptions, response: body, tries: retryCount + 1, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                    const res = await response.json();
+                    requestResponse.push({ request: { endpoint: endpoint.url, tries: retryCount + 1,  ...requestOptions}, response: { response: res, status: response.status }, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
                     return {
                         endpoint: endpoint.url,
                         response: body,
                     };
                 } else {
-                    const body = await response.json();
+                    const res = await response.json();
                     if(requestResponse.length >= index+1) {
                         requestResponse[index].response = body;
-                        requestResponse[index].tries = retryCount + 1;
+                        requestResponse[index].request.tries = retryCount + 1;
                     } else {
-                        requestResponse.push({ endpoint: endpoint.url, request: requestOptions, response: body, tries: retryCount+1, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
+                        requestResponse.push({ request: { endpoint: endpoint.url, tries: retryCount + 1,  ...requestOptions}, response: res, eventId, requestId: uuidv4(), createdAt: new Date().toISOString()});
                     }
                     throw new Error(`Failed to fetch from ${endpoint.url}. Status: ${response.status}`);
                 }
@@ -162,7 +164,7 @@ router.get("/users", async (request, env) => {
         },
     };
 
-    let requestsData: ResquestType[] = [];
+    let requestsData: RequestType[] = [];
     const eventId = uuidv4();
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {
@@ -225,8 +227,8 @@ router.get("/events", async (request, env) => {
 router.get("/events/:eventId/:requestId", async (request, env) => {
     const { eventId, requestId } = request.params;
     const data: EventType = JSON.parse(await env.EventsList.get(eventId));
-    const responseData: ResquestType | undefined = data.requests.find(
-        (req: ResquestType) => req.requestId === requestId
+    const responseData: RequestType | undefined = data.requests.find(
+        (req: RequestType) => req.requestId === requestId
     );
     return Response.json(data ? responseData : {}, {
         headers: { ...corsHeaders },
@@ -246,7 +248,7 @@ router.post("/users", async (request, env) => {
         body: JSON.stringify(body),
     };
 
-    let requestData: ResquestType[] = [];
+    let requestData: RequestType[] = [];
     const eventId = uuidv4();
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {

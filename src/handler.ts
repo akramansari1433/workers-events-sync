@@ -381,9 +381,7 @@ router.post("/headers", async (request, env) => {
 });
 
 router.get("/headers", async (request, env) => {
-    const headers: {} = arrayToObject(
-        JSON.parse(await env.Configs.get("headers"))
-    );
+    const headers: {} = JSON.parse(await env.Configs.get("headers"));
     return Response.json({ headers }, { headers: { ...corsHeaders } });
 });
 
@@ -424,7 +422,9 @@ router.post("/request/resend", async (request, env) => {
     if (req) {
         let status;
         let headers = { ...req.request.headers };
-        const customHeaders = JSON.parse(await env.Configs.get("headers"));
+        const customHeaders = arrayToObject(
+            JSON.parse(await env.Configs.get("headers"))
+        );
         if (body.customHeader) {
             headers = {
                 ...headers,

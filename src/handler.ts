@@ -61,6 +61,13 @@ export const corsHeaders = {
     "Content-Type": "application/json",
 };
 
+function arrayToObject(arr: any[]) {
+    return arr.reduce((obj, item) => {
+        obj[item.key] = item.value;
+        return obj;
+    }, {});
+}
+
 const router = Router();
 
 const configs = {
@@ -100,7 +107,9 @@ router.post("/api/sync", async (request, env) => {
         index: number
     ): Promise<any> => {
         let retryCount = 0;
-        const customHeaders = JSON.parse(await env.Configs.get("headers"));
+        const customHeaders = arrayToObject(
+            JSON.parse(await env.Configs.get("headers"))
+        );
         while (retryCount < retryConfig?.numberOfRetries) {
             const requestOptions = {
                 method: "POST",
@@ -210,7 +219,9 @@ router.post("/api/sync", async (request, env) => {
 });
 
 router.get("/users", async (request, env) => {
-    const customHeaders = JSON.parse(await env.Configs.get("headers"));
+    const customHeaders = arrayToObject(
+        JSON.parse(await env.Configs.get("headers"))
+    );
     const fetchObject = {
         method: "GET",
         headers: {
@@ -292,7 +303,9 @@ router.get("/events/:eventId/:requestId", async (request, env) => {
 
 router.post("/users", async (request, env) => {
     const body = await request.json();
-    const customHeaders = JSON.parse(await env.Configs.get("headers"));
+    const customHeaders = arrayToObject(
+        JSON.parse(await env.Configs.get("headers"))
+    );
 
     const retryConfig: RetryConfigType = JSON.parse(
         await env.Configs.get("retryconfig")
@@ -368,7 +381,9 @@ router.post("/headers", async (request, env) => {
 });
 
 router.get("/headers", async (request, env) => {
-    const headers: {} = JSON.parse(await env.Configs.get("headers"));
+    const headers: {} = arrayToObject(
+        JSON.parse(await env.Configs.get("headers"))
+    );
     return Response.json({ headers }, { headers: { ...corsHeaders } });
 });
 

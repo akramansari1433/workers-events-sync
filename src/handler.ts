@@ -46,7 +46,7 @@ interface Endpoint {
     credentials: {
         username: string;
         password: string;
-    }
+    };
 }
 
 interface Configs {
@@ -83,43 +83,58 @@ const configs = {
     ],
 };
 
-router.post('/api/sync', async (request, env) => {
-    const retryConfig: RetryConfigType = JSON.parse(await env.Configs.get("retryconfig"));
+router.post("/api/sync", async (request, env) => {
+    const retryConfig: RetryConfigType = JSON.parse(
+        await env.Configs.get("retryconfig")
+    );
 
     const body = await request.json();
-    
+
     // const requestResponse: { endpoint: string, request: any, response?: any, error?: any, tries?: number, eventId?: string, requestId?: string, createdAt?: string }[] = [];
     const requestResponse: RequestType[] = [];
 
     const eventId = uuidv4();
 
-    const callEndpoint = async (endpoint: Endpoint, index: number): Promise<any> => {
+    const callEndpoint = async (
+        endpoint: Endpoint,
+        index: number
+    ): Promise<any> => {
         let retryCount = 0;
+        const customHeaders = JSON.parse(await env.Configs.get("headers"));
         while (retryCount < retryConfig?.numberOfRetries) {
             const requestOptions = {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    ...customHeaders,
                 },
                 body: JSON.stringify(body),
             };
             try {
-                const response: any = await Promise.race([fetch(endpoint.url, requestOptions), new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), retryConfig?.timeout))]);
+                const response: any = await Promise.race([
+                    fetch(endpoint.url, requestOptions),
+                    new Promise((resolve, reject) =>
+                        setTimeout(
+                            () => reject(new Error("timeout")),
+                            retryConfig?.timeout
+                        )
+                    ),
+                ]);
                 if (response.ok) {
                     const res = await response.json();
-                    requestResponse.push({ 
-                        requestId: uuidv4(), 
-                        eventId, 
-                        request: { 
-                            endpoint: endpoint.url, 
-                            tries: retryCount + 1,  
+                    requestResponse.push({
+                        requestId: uuidv4(),
+                        eventId,
+                        request: {
+                            endpoint: endpoint.url,
+                            tries: retryCount + 1,
                             ...requestOptions,
-                        }, 
-                        response: { 
-                            response: res, 
-                            status: res.status 
-                        }, 
-                        createdAt: new Date().toISOString()
+                        },
+                        response: {
+                            response: res,
+                            status: res.status,
+                        },
+                        createdAt: new Date().toISOString(),
                     });
                     return {
                         endpoint: endpoint.url,
@@ -128,44 +143,52 @@ router.post('/api/sync', async (request, env) => {
                 } else {
                     const res = await response.json();
                     console.log("response", res);
-                    if(requestResponse.length >= index+1) {
+                    if (requestResponse.length >= index + 1) {
                         requestResponse[index].response = {
-                            ...res
+                            ...res,
                         };
                         requestResponse[index].request.tries = retryCount + 1;
                     } else {
-                        requestResponse.push({ 
-                            requestId: uuidv4(), 
-                            eventId, 
-                            request: { 
-                                endpoint: endpoint.url, 
-                                tries: retryCount + 1,  
-                                ...requestOptions
-                            }, 
-                            response: { 
-                                ...res
-                            }, 
-                            createdAt: new Date().toISOString()
+                        requestResponse.push({
+                            requestId: uuidv4(),
+                            eventId,
+                            request: {
+                                endpoint: endpoint.url,
+                                tries: retryCount + 1,
+                                ...requestOptions,
+                            },
+                            response: {
+                                ...res,
+                            },
+                            createdAt: new Date().toISOString(),
                         });
                     }
-                    throw new Error(`Failed to fetch from ${endpoint.url}. Status: ${response.status}`);
+                    throw new Error(
+                        `Failed to fetch from ${endpoint.url}. Status: ${response.status}`
+                    );
                 }
             } catch (error: any) {
-                if (error.message === 'timeout') {
+                if (error.message === "timeout") {
                     throw error;
                 }
                 retryCount++;
-                console.log(`Retrying ${endpoint.url} (${retryCount}/${retryConfig?.numberOfRetries})`);
-                if(retryCount < retryConfig?.numberOfRetries) {
-                    await new Promise(resolve => setTimeout(resolve, retryConfig?.retryInterval));
+                console.log(
+                    `Retrying ${endpoint.url} (${retryCount}/${retryConfig?.numberOfRetries})`
+                );
+                if (retryCount < retryConfig?.numberOfRetries) {
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, retryConfig?.retryInterval)
+                    );
                 } else {
-                    return error
+                    return error;
                 }
             }
         }
     };
-    
-    const results = await Promise.all(configs.endpoints.map((endpoint, i) => callEndpoint(endpoint, i)));
+
+    const results = await Promise.all(
+        configs.endpoints.map((endpoint, i) => callEndpoint(endpoint, i))
+    );
 
     await env.EventsList.put(
         eventId,
@@ -177,18 +200,22 @@ router.post('/api/sync', async (request, env) => {
             tries: 1,
         })
     );
-   
-    return Response.json({results, requestResponse }, {
-        headers: { ...corsHeaders },
-    });
-    
+
+    return Response.json(
+        { results, requestResponse },
+        {
+            headers: { ...corsHeaders },
+        }
+    );
 });
 
 router.get("/users", async (request, env) => {
+    const customHeaders = JSON.parse(await env.Configs.get("headers"));
     const fetchObject = {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
+            ...customHeaders,
         },
     };
 
@@ -265,13 +292,17 @@ router.get("/events/:eventId/:requestId", async (request, env) => {
 
 router.post("/users", async (request, env) => {
     const body = await request.json();
+    const customHeaders = JSON.parse(await env.Configs.get("headers"));
 
-    const retryConfig: RetryConfigType = JSON.parse(await env.Configs.get("retryconfig"));
+    const retryConfig: RetryConfigType = JSON.parse(
+        await env.Configs.get("retryconfig")
+    );
 
     const fetchObject = {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            ...customHeaders,
         },
         body: JSON.stringify(body),
     };
@@ -281,7 +312,7 @@ router.post("/users", async (request, env) => {
     const responseArray: ResponseType[] = await Promise.all(
         configs.endpoints.map(async (endpoint, i) => {
             let status;
-                
+
             const response = await fetch(endpoint.url, fetchObject).then(
                 (response) => {
                     status = response.status;
@@ -307,7 +338,6 @@ router.post("/users", async (request, env) => {
                 endpoint: endpoint.url,
                 response: data,
             };
-            
         })
     );
 
@@ -395,8 +425,10 @@ router.post("/request/resend", async (request, env) => {
             return response.json();
         });
         const data = await response;
+        const requestId = uuidv4();
+        const createdAt = new Date().toISOString();
         event.requests.push({
-            requestId: uuidv4(),
+            requestId,
             eventId: body.eventId,
             request: {
                 endpoint: req.request.endpoint,
@@ -408,15 +440,39 @@ router.post("/request/resend", async (request, env) => {
                 status,
                 response: data,
             },
-            createdAt: new Date().toISOString(),
+            createdAt,
         });
+        event.updatedAt = new Date().toISOString();
+        event.tries = 1;
+        await env.EventsList.put(body.eventId, JSON.stringify(event));
+        return Response.json(
+            {
+                requestId,
+                eventId: body.eventId,
+                request: {
+                    endpoint: req.request.endpoint,
+                    method: req.request.method,
+                    headers,
+                    body: req.request.body,
+                },
+                response: {
+                    status,
+                    response: data,
+                },
+                createdAt,
+            },
+            {
+                headers: { ...corsHeaders },
+            }
+        );
+    } else {
+        return Response.json(
+            { error: true, message: "Something went wrong" },
+            {
+                headers: { ...corsHeaders },
+            }
+        );
     }
-    event.updatedAt = new Date().toISOString();
-    event.tries = 1;
-    await env.EventsList.put(body.eventId, JSON.stringify(event));
-    return Response.json(event, {
-        headers: { ...corsHeaders },
-    });
 });
 
 router.all(

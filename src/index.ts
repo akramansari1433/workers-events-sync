@@ -1,9 +1,5 @@
-import { Router } from "itty-router";
 import router from "./handler";
-export interface Env {
-   EventsList: KVNamespace;
-   Configs: KVNamespace;
-}
+import { Env } from "./types";
 
 export default {
    async fetch(request: Request, env: Env) {

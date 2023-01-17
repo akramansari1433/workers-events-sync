@@ -34,12 +34,6 @@ router.get("/events/:eventId/:requestId", getRequestDetails);
 // Resend request
 router.post("/request/resend", resendRequestCallback);
 
-// Test
-router.get('/test', async (request, env: Env) => {
-    const data = await env.Customers.get('test');
-    return Response.json(data);
-})
-
 router.all(
     "*",
     () =>

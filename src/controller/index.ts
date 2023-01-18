@@ -3,7 +3,7 @@ import { getCustomHeadersCallback, saveCustomHeadersCallback } from './customHea
 import { getEvents, getRequestDetails } from './events';
 import { syncCallback, resendRequestCallback } from './sync';
 import { getUsersCallback, saveUsersCallback } from './users';
-import { getCustomerCallback } from './customers';
+import { getCustomersCallback, getSingleCustomerCallback } from './customers';
 
 export {
     getRetryconfigCallback,
@@ -16,5 +16,6 @@ export {
     syncCallback,
     getUsersCallback,
     saveUsersCallback,
-    getCustomerCallback
+    getCustomersCallback,
+    getSingleCustomerCallback
 }

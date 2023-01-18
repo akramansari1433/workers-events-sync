@@ -1,7 +1,7 @@
 import { Router } from "itty-router";
 import { Env } from "./types";
 
-import { getCustomerCallback, getCustomHeadersCallback, getEvents, getRequestDetails, getRetryconfigCallback, getUsersCallback, resendRequestCallback, saveCustomHeadersCallback, saveRetryConfigCallback, saveUsersCallback, syncCallback } from "./controller";
+import { getCustomersCallback, getCustomHeadersCallback, getEvents, getRequestDetails, getRetryconfigCallback, getSingleCustomerCallback, getUsersCallback, resendRequestCallback, saveCustomHeadersCallback, saveRetryConfigCallback, saveUsersCallback, syncCallback } from "./controller";
 import { corsHeaders } from "./utils/constant";
 
 const router = Router();
@@ -35,7 +35,10 @@ router.get("/events/:eventId/:requestId", getRequestDetails);
 router.post("/request/resend/:customerId/:endpointId", resendRequestCallback);
 
 // Get all customers
-router.get("/customers", getCustomerCallback);
+router.get("/customers", getCustomersCallback);
+
+// Get single customer details
+router.get("/customer/:customerId", getSingleCustomerCallback);
 
 router.all(
     "*",

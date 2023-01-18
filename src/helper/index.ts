@@ -120,3 +120,28 @@ export const getEndpointDetails = async (env: Env, customerId: string, endpointI
         }
     }
 }
+
+export const getOneCustomerDetails = async (env: Env, key: Keys) => {
+    const customerDataString = await env.Customers.get(key.name);
+
+    if(customerDataString) {
+        const data = JSON.parse(customerDataString);
+        return data
+    } else {
+        return {
+            error: true,
+            message: "Could not find the customer"
+        }
+    }
+}
+
+export const getCustomerDetails = async (env: Env) => {
+    const customersKeyString = await env.Customers.list();
+
+    if(customersKeyString) {
+        const keys: Keys[] = customersKeyString.keys;
+        const values = await Promise.all(keys.map(async (key) => await getOneCustomerDetails(env, key)));
+        return values
+    }
+    return
+}

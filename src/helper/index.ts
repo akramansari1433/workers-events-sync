@@ -1,4 +1,4 @@
-import { Customer, Endpoint, Env, Keys } from "../types";
+import { Customer, Endpoint, Env, Error, Keys } from "../types";
 
 export const getCustomerSpecs = async (env: Env, customerId: string) => {
     const existingCustomerString = await env.Customers.get(customerId);
@@ -86,4 +86,37 @@ export const findCustomer = async (env: Env, origin: string): Promise<Customer |
         return existingCustomer.find(x => x !== undefined)
     }
     return
+}
+
+export const getEventDetails = async (key: Keys, env: Env) => {
+    const eventString = await env.EventsList.get(key.name)
+    if (eventString) {
+        return eventString
+    } else {
+        return null
+    }
+}
+
+export const getEndpointDetails = async (env: Env, customerId: string, endpointId: string): Promise<Endpoint | Error> => {
+    const customerDetails = await getCustomerSpecs(env, customerId);
+
+    if(customerDetails.error) {
+        return {
+            error: customerDetails.error,
+            message: customerDetails.message,
+            errorCode: customerDetails.code
+        }
+    }
+
+    const endpointDetails = customerDetails.customer?.endpoints.find(endpoint => endpoint.endpointId === endpointId);
+    
+    if (endpointDetails) {
+        return endpointDetails;
+    } else {
+        return {
+            error: true,
+            errorCode: 1002,
+            message: "Endpoint details not found"
+        }
+    }
 }

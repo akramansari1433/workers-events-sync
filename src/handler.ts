@@ -32,7 +32,7 @@ router.get("/events", getEvents);
 router.get("/events/:eventId/:requestId", getRequestDetails);
 
 // Resend request
-router.post("/request/resend", resendRequestCallback);
+router.post("/request/resend/:customerId/:endpointId", resendRequestCallback);
 
 router.all(
     "*",

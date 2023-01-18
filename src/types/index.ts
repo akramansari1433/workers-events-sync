@@ -66,3 +66,9 @@ export type Customer = {
     host?: string;
     endpoints: Endpoint[];
 }
+
+export type Error = {
+    error: boolean;
+    message: string;
+    errorCode: number;
+}

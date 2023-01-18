@@ -1,7 +1,7 @@
 import { getRetryconfigCallback, saveRetryConfigCallback } from './retryConfig';
 import { getCustomHeadersCallback, saveCustomHeadersCallback } from './customHeaders';
-import { getEvents, getRequestDetails, resendRequestCallback } from './events';
-import { syncCallback } from './sync';
+import { getEvents, getRequestDetails } from './events';
+import { syncCallback, resendRequestCallback } from './sync';
 import { getUsersCallback, saveUsersCallback } from './users';
 
 export {

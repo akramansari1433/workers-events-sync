@@ -136,13 +136,18 @@ export const getOneCustomerDetails = async (env: Env, key: Keys): Promise<Custom
     }
 }
 
-export const getCustomerDetails = async (env: Env) => {
+export const getCustomersDetails = async (env: Env): Promise<Customer[] | Error> => {
     const customersKeyString = await env.Customers.list();
 
-    if(customersKeyString) {
-        const keys: Keys[] = customersKeyString.keys;
-        const values = await Promise.all(keys.map(async (key) => await getOneCustomerDetails(env, key)));
-        return values
+    if(!customersKeyString) {
+        return {
+            error: true,
+            errorCode: 1001,
+            message: "Could not get customers"
+        }
     }
-    return
+
+    const keys: Keys[] = customersKeyString.keys;
+    const values = await Promise.all(keys.map(async (key) => await getOneCustomerDetails(env, key))) as Customer[];
+    return values
 }

@@ -1,12 +1,12 @@
 import { IRequest } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
 
-import { getCustomerDetails, getOneCustomerDetails } from "../helper";
+import { getCustomersDetails, getOneCustomerDetails } from "../helper";
 import { Env } from "../types";
 import { corsHeaders } from "../utils/constant";
 
 export const getCustomersCallback = async (request: IRequest, env: Env) => {
-    const customerDetails = await getCustomerDetails(env)
+    const customerDetails = await getCustomersDetails(env)
     if (customerDetails) {
         return Response.json(customerDetails, {
             headers: { ...corsHeaders }
@@ -25,19 +25,23 @@ export const getCustomersCallback = async (request: IRequest, env: Env) => {
 export const getSingleCustomerCallback = async (request: IRequest, env: Env) => {
     const { customerId } = request.params;
 
-    const customerDetails = await getOneCustomerDetails(env, { name: customerId })
-    if (customerDetails) {
-        return Response.json(customerDetails, {
-            headers: { ...corsHeaders }
-        });
-    } else {
+    const customerDetails = await getOneCustomerDetails(env, { name: customerId });
+
+    if("error" in customerDetails) {
         return Response.json({
-            error: true,
-            message: "Could not find customer list"
+            error: customerDetails.error,
+            message: customerDetails.message,
+            erorCode: customerDetails.errorCode
         }, {
             status: 500,
             headers: { ...corsHeaders }
         })
+    }
+
+    if (customerDetails) {
+        return Response.json(customerDetails, {
+            headers: { ...corsHeaders }
+        });
     }
 }
 

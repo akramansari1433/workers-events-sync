@@ -1,6 +1,5 @@
 export interface Env {
     EventsList: KVNamespace;
-    Configs: KVNamespace;
     Customers: KVNamespace;
  }
 

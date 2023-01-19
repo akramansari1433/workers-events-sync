@@ -121,7 +121,7 @@ export const getEndpointDetails = async (env: Env, customerId: string, endpointI
     }
 }
 
-export const getOneCustomerDetails = async (env: Env, key: Keys) => {
+export const getOneCustomerDetails = async (env: Env, key: Keys): Promise<Customer | Error> => {
     const customerDataString = await env.Customers.get(key.name);
 
     if(customerDataString) {
@@ -130,6 +130,7 @@ export const getOneCustomerDetails = async (env: Env, key: Keys) => {
     } else {
         return {
             error: true,
+            errorCode: 1001,
             message: "Could not find the customer"
         }
     }

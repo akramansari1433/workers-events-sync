@@ -70,7 +70,8 @@ export const createCustomer = async (request: IRequest, env: Env) => {
     await env.Customers.put(customerId, JSON.stringify(customerData));
 
     return Response.json({
-        message: "Customer added successfully"
+        message: "Customer added successfully",
+        customerData
     }, {
         headers: { ...corsHeaders }
     })
@@ -99,7 +100,8 @@ export const createEndpoint = async (request: IRequest, env: Env) => {
     await env.Customers.put(customerId, JSON.stringify(existingCustomer));
 
     return Response.json({
-        message: 'Endpoint added'
+        message: 'Endpoint added',
+        customerData: existingCustomer
     }, {
         headers: { ...corsHeaders }
     })

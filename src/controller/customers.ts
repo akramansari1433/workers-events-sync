@@ -48,7 +48,7 @@ export const getSingleCustomerCallback = async (request: IRequest, env: Env) => 
 export const createCustomer = async (request: IRequest, env: Env) => {
     const customerId = uuidv4();
 
-    const body = await request.json();
+    const body: { customerName: string, host: string, endpoints: any[] } = await request.json();
 
     if(!body.customerName || !body.host || !body.endpoints.length) {
         return Response.json({
@@ -62,9 +62,17 @@ export const createCustomer = async (request: IRequest, env: Env) => {
         })
     }
 
+    const endpoints = body.endpoints.map(endpoint => {
+        return {
+            endpointId: uuidv4(),
+            ...endpoint
+        }
+    })
+
     const customerData = {
         customerId,
-        ...body
+        ...body,
+        endpoints,
     }
 
     await env.Customers.put(customerId, JSON.stringify(customerData));

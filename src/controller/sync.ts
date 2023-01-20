@@ -16,7 +16,7 @@ export const syncCallback = async (request: IRequest, env: Env) => {
         return Response.json({
             error: true,
             message: 'Customer not found',
-            error_code: 1001
+            errorCode: 1001
         }, {
             status: 400,
             headers: { ...corsHeaders }

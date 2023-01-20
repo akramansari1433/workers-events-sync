@@ -13,7 +13,7 @@ const getCustomHeadersCallback = async (request: IRequest, env: Env) => {
     if (res.error) {
         return Response.json({
             error: res.error,
-            error_code: res.code,
+            errorCode: res.code,
             message: res.message
         }, {
             status: 400,
@@ -54,7 +54,7 @@ const saveCustomHeadersCallback = async (request: IRequest, env: Env) => {
     if (res.error || !res.customer) {
         return Response.json({
             error: res.error,
-            error_code: res.code,
+            errorCode: res.code,
             message: res.message
         }, {
             status: 400,
@@ -68,7 +68,7 @@ const saveCustomHeadersCallback = async (request: IRequest, env: Env) => {
     if(!existingEndpoints) {
         return Response.json({
             error: true,
-            error_code: 1003,
+            errorCode: 1003,
             message: "No endpoints exists for this customer"
         }, {
             status: 400,

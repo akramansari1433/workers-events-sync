@@ -305,6 +305,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                 method: req.method,
                 headers,
                 body: req.body,
+                tries: requestResponse.request.tries
             },
             response: {
                 status: requestResponse.response.status,
@@ -312,8 +313,8 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
             },
             createdAt: requestResponse.createdAt,
         });
+
         event.updatedAt = new Date().toISOString();
-        event.tries = requestResponse.request.tries;
 
         await env.EventsList.put(
             body.eventId, 

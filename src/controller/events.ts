@@ -15,6 +15,7 @@ export const getEvents = async (request: RequestLike, env: Env) => {
 
         if(!values.length) {
             return Response.json({
+                error: true,
                 message: "No events found",
             }, {
                 headers: { ...corsHeaders }

@@ -13,17 +13,23 @@ export const getEvents = async (request: RequestLike, env: Env) => {
 
         const values = await Promise.all(keys.map(async (key) => await getEventDetails(key, env)));
 
-        if (values.length) {
-            const data: EventType[] = values.map((value) => {
-                if (value) {
-                    return JSON.parse(value)
-                }
-            });
-
-            return Response.json(data, {
-                headers: { ...corsHeaders },
-            });
+        if(!values.length) {
+            return Response.json({
+                message: "No events found",
+            }, {
+                headers: { ...corsHeaders }
+            })
         }
+        
+        const data: EventType[] = values.map((value) => {
+            if (value) {
+                return JSON.parse(value)
+            }
+        });
+
+        return Response.json(data, {
+            headers: { ...corsHeaders },
+        });
     }
 }
 

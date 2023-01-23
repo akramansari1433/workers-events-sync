@@ -16,6 +16,7 @@ export type CustomHeaders = {
 export type RequestType = {
     requestId: string;
     eventId: string;
+    endpointId?: string,
     request: {
         endpoint: string;
         method: string;

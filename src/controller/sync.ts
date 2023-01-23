@@ -1,10 +1,10 @@
 import { IRequest } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
-import { findCustomer, getCustomerSpecs, getEndpointDetails, getEventDetails, getRetryConfig } from "../helper";
+import { findCustomer, getEndpointDetails, getEventDetails } from "../helper";
 
 import { Customer, CustomHeaders, Env, EventType } from "../types";
 import { Endpoint, RequestType, RetryConfig } from "../types";
-import { arrayToObject, configs, corsHeaders, CUSTOM_HEADERS, RETRY_CONFIG } from "../utils/constant";
+import { arrayToObject, configs, corsHeaders } from "../utils/constant";
 
 export const syncCallback = async (request: IRequest, env: Env) => {
     const requestHeaders = new Map(request.headers);
@@ -58,6 +58,7 @@ export const syncCallback = async (request: IRequest, env: Env) => {
                     requestResponse.push({
                         requestId: uuidv4(),
                         eventId,
+                        endpointId: endpoint.endpointId,
                         request: {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
@@ -85,6 +86,7 @@ export const syncCallback = async (request: IRequest, env: Env) => {
                         requestResponse.push({
                             requestId: uuidv4(),
                             eventId,
+                            endpointId: endpoint.endpointId,
                             request: {
                                 endpoint: endpoint.endpoint,
                                 tries: retryCount + 1,
@@ -186,6 +188,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
         const requestResponse: RequestType = {
             requestId: '',
             eventId: '',
+            endpointId: '',
             request: {
                 endpoint: '',
                 method: '',
@@ -232,6 +235,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                         
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = body.eventId;
+                        requestResponse.endpointId = endpoint.endpointId;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
@@ -252,6 +256,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
     
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = body.eventId;
+                        requestResponse.endpointId = endpoint.endpointId;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
@@ -292,6 +297,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
         event.requests.push({
             requestId: requestResponse.requestId,
             eventId: body.eventId,
+            endpointId: endpointId,
             request: {
                 endpoint: req.endpoint,
                 method: req.method,

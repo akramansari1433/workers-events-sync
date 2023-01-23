@@ -1,4 +1,4 @@
-import { Customer, Endpoint, Env, Error, Keys } from "../types";
+import { Customer, Endpoint, Env, Error, EventType, Keys } from "../types";
 
 export const getCustomerSpecs = async (env: Env, customerId: string) => {
     const existingCustomerString = await env.Customers.get(customerId);
@@ -150,4 +150,13 @@ export const getCustomersDetails = async (env: Env): Promise<Customer[] | Error>
     const keys: Keys[] = customersKeyString.keys;
     const values = await Promise.all(keys.map(async (key) => await getOneCustomerDetails(env, key))) as Customer[];
     return values
+}
+
+export const sortRequests = (data: EventType[]) => {
+    data.forEach(customer => {
+        customer.requests.sort((a, b) => {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+    });
+    return data;
 }

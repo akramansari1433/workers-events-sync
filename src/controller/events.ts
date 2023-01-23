@@ -1,10 +1,9 @@
 import { RequestLike } from "itty-router";
-import { v4 as uuidv4 } from "uuid";
-import { getEventDetails } from "../helper";
+import { getEventDetails, sortRequests } from "../helper";
 
 import { Env } from "../types";
 import { EventType, Keys, RequestType } from "../types";
-import { arrayToObject, corsHeaders, CUSTOM_HEADERS } from "../utils/constant";
+import { corsHeaders } from "../utils/constant";
 
 export const getEvents = async (request: RequestLike, env: Env) => {
     const keysString = await env.EventsList.list();
@@ -28,7 +27,9 @@ export const getEvents = async (request: RequestLike, env: Env) => {
             }
         });
 
-        return Response.json(data, {
+        const sortedEvents = sortRequests(data);
+
+        return Response.json(sortedEvents, {
             headers: { ...corsHeaders },
         });
     }

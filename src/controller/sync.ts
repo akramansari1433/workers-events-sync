@@ -8,7 +8,7 @@ import { arrayToObject, configs, corsHeaders } from "../utils/constant";
 
 export const syncCallback = async (request: IRequest, env: Env) => {
     const requestHeaders = new Map(request.headers);
-    const requestOrigin = requestHeaders.get('origin') as string;
+    const requestOrigin = requestHeaders.get('origin') as string || 'http://localhost:8000';
 
     const customer: Customer | undefined = await findCustomer(env, requestOrigin);
 

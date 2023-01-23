@@ -12,6 +12,8 @@ export const syncCallback = async (request: IRequest, env: Env) => {
 
     const customer: Customer | undefined = await findCustomer(env, requestOrigin);
 
+    console.log("Customer ===> ", customer);
+
     if(!customer) {
         return Response.json({
             error: true,

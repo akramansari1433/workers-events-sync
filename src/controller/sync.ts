@@ -219,7 +219,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                         "Content-Type": "application/json",
                         ...customHeaders,
                     },
-                    body: JSON.stringify(body),
+                    body: JSON.stringify(JSON.parse(req.body)),
                 };
 
                 try {

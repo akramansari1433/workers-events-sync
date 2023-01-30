@@ -1,6 +1,11 @@
 import { IRequest } from "itty-router";
 import { v4 as uuidv4 } from "uuid";
-import { findCustomer, getEndpointDetails, getEventDetails } from "../helper";
+import {
+    findCustomer,
+    getEndpointDetails,
+    getEventDetails,
+    getOneCustomerDetails,
+} from "../helper";
 
 import { Customer, CustomHeaders, Env, EventType } from "../types";
 import { Endpoint, RequestType, RetryConfig } from "../types";
@@ -8,21 +13,28 @@ import { arrayToObject, configs, corsHeaders } from "../utils/constant";
 
 export const syncCallback = async (request: IRequest, env: Env) => {
     const requestHeaders = new Map(request.headers);
-    const requestOrigin = requestHeaders.get('origin') as string || 'http://localhost:8000';
+    const requestOrigin =
+        (requestHeaders.get("origin") as string) || "http://localhost:8000";
 
-    const customer: Customer | undefined = await findCustomer(env, requestOrigin);
+    const customer: Customer | undefined = await findCustomer(
+        env,
+        requestOrigin
+    );
 
     console.log("Customer ===> ", customer);
 
-    if(!customer) {
-        return Response.json({
-            error: true,
-            message: 'Customer not found',
-            errorCode: 1001
-        }, {
-            status: 400,
-            headers: { ...corsHeaders }
-        })
+    if (!customer) {
+        return Response.json(
+            {
+                error: true,
+                message: "Customer not found",
+                errorCode: 1001,
+            },
+            {
+                status: 400,
+                headers: { ...corsHeaders },
+            }
+        );
     }
 
     const body = await request.json();
@@ -31,9 +43,14 @@ export const syncCallback = async (request: IRequest, env: Env) => {
 
     const eventId = uuidv4();
 
-    const callEndpoint = async (endpoint: Endpoint, index: number): Promise<any> => {
+    const callEndpoint = async (
+        endpoint: Endpoint,
+        index: number
+    ): Promise<any> => {
         const retryConfig = endpoint.retryConfig;
-        const customHeaders = endpoint.headers ? arrayToObject(endpoint.headers) : {};
+        const customHeaders = endpoint.headers
+            ? arrayToObject(endpoint.headers)
+            : {};
         let retryCount = 0;
 
         while (retryCount < retryConfig?.numberOfRetries) {
@@ -124,7 +141,9 @@ export const syncCallback = async (request: IRequest, env: Env) => {
     };
 
     const results = await Promise.all(
-        customer.endpoints.map((endpoint: Endpoint, i: number) => callEndpoint(endpoint, i))
+        customer.endpoints.map((endpoint: Endpoint, i: number) =>
+            callEndpoint(endpoint, i)
+        )
     );
 
     await env.EventsList.put(
@@ -144,7 +163,7 @@ export const syncCallback = async (request: IRequest, env: Env) => {
             headers: { ...corsHeaders },
         }
     );
-}
+};
 
 export const resendRequestCallback = async (request: IRequest, env: Env) => {
     const body: {
@@ -155,45 +174,57 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
 
     const { customerId, endpointId } = request.params;
 
-    const endpointDetails = await getEndpointDetails(env, customerId, endpointId);
+    const endpointDetails = await getEndpointDetails(
+        env,
+        customerId,
+        endpointId
+    );
 
-    if("error" in endpointDetails) {
-        return Response.json({ 
-            error: endpointDetails.error, 
-            message: endpointDetails.message,
-            errorCode: endpointDetails.errorCode
-        }, {
-            status: 400,
-            headers: { ...corsHeaders },
-        });
+    if ("error" in endpointDetails) {
+        return Response.json(
+            {
+                error: endpointDetails.error,
+                message: endpointDetails.message,
+                errorCode: endpointDetails.errorCode,
+            },
+            {
+                status: 400,
+                headers: { ...corsHeaders },
+            }
+        );
     }
 
     const eventString = await getEventDetails({ name: body.eventId }, env);
 
-    if(!eventString) {
-        return Response.json({ 
-            error: true, 
-            message: "Event details not found."
-        }, {
-            status: 400,
-            headers: { ...corsHeaders },
-        });
+    if (!eventString) {
+        return Response.json(
+            {
+                error: true,
+                message: "Event details not found.",
+            },
+            {
+                status: 400,
+                headers: { ...corsHeaders },
+            }
+        );
     }
 
     const event: EventType = JSON.parse(eventString);
 
-    const req = event.requests.find((req) => req.requestId === body.requestId)?.request;
+    const req = event.requests.find(
+        (req) => req.requestId === body.requestId
+    )?.request;
 
     if (req) {
         // let status;
         let headers = { ...req.headers };
         const requestResponse: RequestType = {
-            requestId: '',
-            eventId: '',
-            endpointId: '',
+            requestId: "",
+            eventId: "",
+            endpointId: "",
             request: {
-                endpoint: '',
-                method: '',
+                endpoint: "",
+                method: "",
                 headers: null,
                 body: null,
                 tries: 0,
@@ -202,17 +233,20 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                 status: 0,
                 response: null,
             },
-            createdAt: '',
+            createdAt: "",
         };
 
-        
         const callEndpoint = async (endpoint: Endpoint): Promise<any> => {
-            const customHeaders: CustomHeaders = endpointDetails.headers ? arrayToObject(endpointDetails.headers) : {};
-            const retryConfig: RetryConfig = endpointDetails.retryConfig ? endpointDetails.retryConfig : { numberOfRetries: 1, retryInterval: 2000, timeout: 10000 };
+            const customHeaders: CustomHeaders = endpointDetails.headers
+                ? arrayToObject(endpointDetails.headers)
+                : {};
+            const retryConfig: RetryConfig = endpointDetails.retryConfig
+                ? endpointDetails.retryConfig
+                : { numberOfRetries: 1, retryInterval: 2000, timeout: 10000 };
 
             let retryCount = 0;
 
-            while(retryCount < retryConfig.numberOfRetries) {
+            while (retryCount < retryConfig.numberOfRetries) {
                 const requestOptions = {
                     method: "POST",
                     headers: {
@@ -234,19 +268,19 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                     ]);
                     if (response.ok) {
                         const res = await response.json();
-                        
+
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = body.eventId;
                         requestResponse.endpointId = endpoint.endpointId;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
-                            ...requestOptions
+                            ...requestOptions,
                         };
                         requestResponse.response = {
                             response: res,
                             status: res.status,
-                        }
+                        };
                         requestResponse.createdAt = new Date().toISOString();
 
                         return {
@@ -255,19 +289,19 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                         };
                     } else {
                         const res = await response.json();
-    
+
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = body.eventId;
                         requestResponse.endpointId = endpoint.endpointId;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
-                            ...requestOptions
+                            ...requestOptions,
                         };
                         requestResponse.response = {
                             response: res,
                             status: res.status,
-                        }
+                        };
                         requestResponse.createdAt = new Date().toISOString();
 
                         throw new Error(
@@ -291,11 +325,10 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                     }
                 }
             }
+        };
 
-        }
+        const result = await callEndpoint(endpointDetails);
 
-        const result = await callEndpoint(endpointDetails)
-        
         event.requests.push({
             requestId: requestResponse.requestId,
             eventId: body.eventId,
@@ -305,7 +338,7 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
                 method: req.method,
                 headers,
                 body: req.body,
-                tries: requestResponse.request.tries
+                tries: requestResponse.request.tries,
             },
             response: {
                 status: requestResponse.response.status,
@@ -316,17 +349,11 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
 
         event.updatedAt = new Date().toISOString();
 
-        await env.EventsList.put(
-            body.eventId, 
-            JSON.stringify(event)
-        );
+        await env.EventsList.put(body.eventId, JSON.stringify(event));
 
-        return Response.json(
-            requestResponse,
-            {
-                headers: { ...corsHeaders },
-            }
-        );
+        return Response.json(requestResponse, {
+            headers: { ...corsHeaders },
+        });
     } else {
         return Response.json(
             { error: true, message: "Request not found" },
@@ -336,4 +363,174 @@ export const resendRequestCallback = async (request: IRequest, env: Env) => {
             }
         );
     }
-}
+};
+
+export const resendBulkRequestCallback = async (
+    request: IRequest,
+    env: Env
+) => {
+    const body: {
+        requests: RequestType[];
+    } = await request.json();
+
+    const { customerId, eventId } = request.params;
+
+    const customerDetails = await getOneCustomerDetails(env, {
+        name: customerId,
+    });
+
+    if ("error" in customerDetails) {
+        return Response.json(
+            {
+                error: customerDetails.error,
+                message: customerDetails.message,
+                errorCode: customerDetails.errorCode,
+            },
+            {
+                status: 400,
+                headers: { ...corsHeaders },
+            }
+        );
+    }
+
+    const eventString = await getEventDetails({ name: eventId }, env);
+
+    if (!eventString) {
+        return Response.json(
+            {
+                error: true,
+                message: "Event details not found.",
+            },
+            {
+                status: 400,
+                headers: { ...corsHeaders },
+            }
+        );
+    }
+
+    const event: EventType = JSON.parse(eventString);
+    const callEndpoint = async (
+        endpoint: Endpoint,
+        request: RequestType
+    ): Promise<any> => {
+        const customHeaders: CustomHeaders = endpoint.headers
+            ? arrayToObject(endpoint.headers)
+            : {};
+        const retryConfig: RetryConfig = endpoint.retryConfig
+            ? endpoint.retryConfig
+            : { numberOfRetries: 1, retryInterval: 2000, timeout: 10000 };
+
+        let retryCount = 0;
+        const requestResponse: RequestType = {
+            requestId: "",
+            eventId: "",
+            endpointId: "",
+            request: {
+                endpoint: "",
+                method: "",
+                headers: null,
+                body: null,
+                tries: 0,
+            },
+            response: {
+                status: 0,
+                response: null,
+            },
+            createdAt: "",
+        };
+        while (retryCount < retryConfig.numberOfRetries) {
+            const requestOptions = {
+                method: request.request.method,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...customHeaders,
+                },
+                ...(request.request.method === "POST" && {
+                    body: JSON.stringify(request.request.body),
+                }),
+            };
+
+            try {
+                const response: any = await Promise.race([
+                    fetch(endpoint.endpoint, requestOptions),
+                    new Promise((resolve, reject) =>
+                        setTimeout(
+                            () => reject(new Error("timeout")),
+                            retryConfig?.timeout
+                        )
+                    ),
+                ]);
+                if (response.ok) {
+                    const res = await response.json();
+
+                    requestResponse.requestId = uuidv4();
+                    requestResponse.eventId = eventId;
+                    requestResponse.endpointId = endpoint.endpointId;
+                    requestResponse.request = {
+                        endpoint: endpoint.endpoint,
+                        tries: retryCount + 1,
+                        ...requestOptions,
+                    };
+                    requestResponse.response = {
+                        response: res,
+                        status: res.status,
+                    };
+                    requestResponse.createdAt = new Date().toISOString();
+                } else {
+                    const res = await response.json();
+
+                    requestResponse.requestId = uuidv4();
+                    requestResponse.eventId = eventId;
+                    requestResponse.endpointId = endpoint.endpointId;
+                    requestResponse.request = {
+                        endpoint: endpoint.endpoint,
+                        tries: retryCount + 1,
+                        ...requestOptions,
+                    };
+                    requestResponse.response = {
+                        response: res,
+                        status: res.status,
+                    };
+                    requestResponse.createdAt = new Date().toISOString();
+
+                    throw new Error(
+                        `Failed to fetch from ${endpoint.endpoint}. Status: ${response.status}`
+                    );
+                }
+            } catch (error: any) {
+                if (error.message === "timeout") {
+                    throw error;
+                }
+                retryCount++;
+                console.log(
+                    `Retrying ${endpoint.endpoint} (${retryCount}/${retryConfig?.numberOfRetries})`
+                );
+                if (retryCount < retryConfig?.numberOfRetries) {
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, retryConfig?.retryInterval)
+                    );
+                }
+            }
+        }
+        event.requests.push(requestResponse);
+        event.updatedAt = new Date().toISOString();
+        await env.EventsList.put(eventId, JSON.stringify(event));
+    };
+
+    const res = await Promise.all(
+        body.requests.map(async (req) => {
+            const endpointDetails = customerDetails.endpoints.find(
+                (request) => request.endpoint === req.request.endpoint
+            );
+            if (endpointDetails) {
+                const result = await callEndpoint(endpointDetails, req);
+            }
+        })
+    );
+    return Response.json(
+        { success: true, message: "Request resend successfull" },
+        {
+            headers: { ...corsHeaders },
+        }
+    );
+};

@@ -1,7 +1,7 @@
 export interface Env {
     EventsList: KVNamespace;
     Customers: KVNamespace;
- }
+}
 
 export type RetryConfig = {
     numberOfRetries: number;
@@ -11,12 +11,12 @@ export type RetryConfig = {
 
 export type CustomHeaders = {
     [key: string]: [value: any];
-}
+};
 
 export type RequestType = {
     requestId: string;
     eventId: string;
-    endpointId?: string,
+    endpointId?: string;
     request: {
         endpoint: string;
         method: string;
@@ -51,24 +51,24 @@ export type Keys = {
 export type Endpoint = {
     endpointId: string;
     endpoint: string;
-    headers: {key: string, value: string}[];
+    headers: { key: string; value: string }[];
     retryConfig: RetryConfig;
-}
+};
 
 export type Configs = {
     customerId: string;
     endpoints: Endpoint[];
-}
+};
 
 export type Customer = {
     customerId?: string;
     customerName?: string;
     host?: string;
     endpoints: Endpoint[];
-}
+};
 
 export type Error = {
     error: boolean;
     message: string;
     errorCode: number;
-}
+};

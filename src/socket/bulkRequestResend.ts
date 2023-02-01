@@ -10,19 +10,23 @@ import {
 } from "../types";
 import { arrayToObject } from "../utils/constant";
 import { v4 as uuidv4 } from "uuid";
+import { IRequest } from "itty-router";
 
-export const bulkRequestResend = (env: Env) => {
+export const bulkRequestResend = (request: IRequest, env: Env) => {
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
 
     server.accept();
+
     server.send(JSON.stringify({ message: "Hello form server!" }));
-    server.addEventListener("message", async (event) => {
-        const { customerId, eventId, requests }: BulkRequestResendType =
-            JSON.parse(event.data.toString());
+
+    server.addEventListener("message", async ({ data }) => {
+        const { customerId, eventId, requests }: BulkRequestResendType = JSON.parse(data.toString());
+
         const customerDetails = await getOneCustomerDetails(env, {
             name: customerId,
         });
+
         if ("error" in customerDetails) {
             return server.send(
                 JSON.stringify({

@@ -17,6 +17,7 @@ import {
     syncCallback,
 } from "./controller";
 import { resendBulkRequestCallback } from "./controller/sync";
+import { bulkRequestResend } from "./socket/bulkRequestResend";
 import { corsHeaders } from "./utils/constant";
 
 const router = Router();
@@ -50,10 +51,10 @@ router.get("/events/:eventId/:requestId", getRequestDetails);
 router.post("/request/resend/:customerId/:endpointId", resendRequestCallback);
 
 // Resend bulk request
-router.post(
-    "/request/resendbulk/:customerId/:eventId",
-    resendBulkRequestCallback
-);
+router.post("/request/resendbulk/:customerId/:eventId", resendBulkRequestCallback);
+
+// Resend bulk request websocket
+router.get("/ws/request/resendbulk", bulkRequestResend);
 
 // Get all customers
 router.get("/customers", getCustomersCallback);

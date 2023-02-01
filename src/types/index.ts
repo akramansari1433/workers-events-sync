@@ -72,3 +72,9 @@ export type Error = {
     message: string;
     errorCode: number;
 };
+
+export type BulkRequestResendType = {
+    customerId: string;
+    eventId: string;
+    requests: RequestType[];
+};

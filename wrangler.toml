@@ -2,6 +2,6 @@ name = "workers-middleware"
 main = "src/index.ts"
 compatibility_date = "2023-01-09"
 kv_namespaces = [
-   { binding = "EventsList", id = "1b93e2af21a24e6e9d7db39bb393f7e2", preview_id = "29c2c577ab5e4897bc264d72cccbeeba" },
-   { binding = "Customers", id = "4470cf7e636f4455a6dc8412fa0f4ffb", preview_id = "122aae8533784c09b641d9d329efb9d2" }
+   { binding = "EventsList", id = "dd8a55a97e074446a969f1574e0d72cd", preview_id = "e2750e5587b54a7e9328b5533ce20af5" },
+   { binding = "Customers", id = "3b9954795694439e9568b18b1a1e495f", preview_id = "c552eec5f8c747fb8dd6c6e05c0a464e" }
 ]

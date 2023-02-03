@@ -83,9 +83,9 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                         "Content-Type": "application/json",
                         ...customHeaders,
                     },
-                    ...(true && {
-                        body: JSON.stringify(request.request.body),
-                    }),
+                    // ...(true && {
+                        body: JSON.stringify(JSON.parse(request.request.body)),
+                    // }),
                 };
 
                 try {

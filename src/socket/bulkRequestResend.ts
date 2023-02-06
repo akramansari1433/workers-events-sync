@@ -52,15 +52,10 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
             endpoint: Endpoint,
             request: RequestType
         ): Promise<any> => {
-            const customHeaders: CustomHeaders = endpoint.headers
-                ? arrayToObject(endpoint.headers)
-                : {};
-            const retryConfig: RetryConfig = endpoint.retryConfig
-                ? endpoint.retryConfig
-                : { numberOfRetries: 1, retryInterval: 2000, timeout: 10000 };
+            const retryConfig: RetryConfig = endpoint.retryConfig;
 
             let retryCount = 0;
-            const requestResponse: RequestType = {
+            let requestResponse: RequestType = {
                 requestId: "",
                 eventId: "",
                 endpointId: "",
@@ -77,18 +72,14 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                 },
                 createdAt: "",
             };
-            while (retryCount < retryConfig.numberOfRetries) {
+            while (retryCount < retryConfig?.numberOfRetries) {
                 const requestOptions = {
                     method: request.request.method,
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...customHeaders,
-                    },
-                    // ...(true && {
-                    body: JSON.stringify(JSON.parse(request.request.body)),
-                    // }),
+                    headers: { ...arrayToObject(endpoint.headers) },
+                    ...(request.request.method === "POST" && {
+                        body: JSON.stringify(request.request.body),
+                    }),
                 };
-
                 try {
                     const response: any = await Promise.race([
                         fetch(endpoint.endpoint, requestOptions),
@@ -99,36 +90,36 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                             )
                         ),
                     ]);
-                    let status = response.status;
+                    const responseData = await response.json();
                     if (response.ok) {
-                        const res = await response.json();
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = eventId;
-                        requestResponse.endpointId = endpoint.endpointId;
+                        requestResponse.request.endpoint = endpoint.endpoint;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
                             ...requestOptions,
+                            body: request.request.body,
                         };
                         requestResponse.response = {
-                            response: res,
-                            status,
+                            response: responseData,
+                            status: response.status,
                         };
                         requestResponse.createdAt = new Date().toISOString();
+                        break;
                     } else {
-                        const res = await response.json();
-
                         requestResponse.requestId = uuidv4();
                         requestResponse.eventId = eventId;
-                        requestResponse.endpointId = endpoint.endpointId;
+                        requestResponse.request.endpoint = endpoint.endpoint;
                         requestResponse.request = {
                             endpoint: endpoint.endpoint,
                             tries: retryCount + 1,
                             ...requestOptions,
+                            body: request.request.body,
                         };
                         requestResponse.response = {
-                            response: res,
-                            status,
+                            response: responseData,
+                            status: response.status,
                         };
                         requestResponse.createdAt = new Date().toISOString();
 
@@ -136,25 +127,20 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                             `Failed to fetch from ${endpoint.endpoint}. Status: ${response.status}`
                         );
                     }
-                } catch (error: any) {
-                    if (error.message === "timeout") {
-                        throw error;
-                    }
+                } catch (error) {
                     retryCount++;
                     console.log(
                         `Retrying ${endpoint.endpoint} (${retryCount}/${retryConfig?.numberOfRetries})`
                     );
-                    if (retryCount < retryConfig?.numberOfRetries) {
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, retryConfig?.retryInterval)
-                        );
-                    }
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, retryConfig?.retryInterval)
+                    );
                 }
             }
             server.send(JSON.stringify(requestResponse));
-            // eventArray.requests.push(requestResponse);
-            // eventArray.updatedAt = new Date().toISOString();
-            // await env.EventsList.put(eventId, JSON.stringify(event));
+            eventArray.requests.push(requestResponse);
+            eventArray.updatedAt = new Date().toISOString();
+            await env.EventsList.put(eventId, JSON.stringify(eventArray));
         };
 
         await Promise.all(
@@ -167,16 +153,6 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                 }
             })
         );
-
-        // requests.map(async (req, i) => {
-        //     const response = await fetch(req.request.endpoint);
-        //     server.send(
-        //         JSON.stringify({
-        //             status: response.status,
-        //             data: await response.json(),
-        //         })
-        //     );
-        // });
     });
 
     return new Response(null, {

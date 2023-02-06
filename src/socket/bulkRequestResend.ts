@@ -21,7 +21,8 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
     server.send(JSON.stringify({ message: "Hello form server!" }));
 
     server.addEventListener("message", async ({ data }) => {
-        const { customerId, eventId, requests }: BulkRequestResendType = JSON.parse(data.toString());
+        const { customerId, eventId, requests }: BulkRequestResendType =
+            JSON.parse(data.toString());
 
         const customerDetails = await getOneCustomerDetails(env, {
             name: customerId,
@@ -84,7 +85,7 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
                         ...customHeaders,
                     },
                     // ...(true && {
-                        body: JSON.stringify(JSON.parse(request.request.body)),
+                    body: JSON.stringify(JSON.parse(request.request.body)),
                     // }),
                 };
 

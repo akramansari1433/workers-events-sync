@@ -20,9 +20,6 @@ export const syncCallback = async (request: IRequest, env: Env) => {
         env,
         requestOrigin
     );
-
-    console.log("Customer ===> ", customer);
-
     if (!customer) {
         return Response.json(
             {
@@ -37,128 +34,13 @@ export const syncCallback = async (request: IRequest, env: Env) => {
         );
     }
 
-    const body = await request.json();
-
-    const requestResponse: RequestType[] = [];
-
-    const eventId = uuidv4();
-
-    const callEndpoint = async (
-        endpoint: Endpoint,
-        index: number
-    ): Promise<any> => {
-        const retryConfig = endpoint.retryConfig;
-        const customHeaders = endpoint.headers
-            ? arrayToObject(endpoint.headers)
-            : {};
-        let retryCount = 0;
-
-        while (retryCount < retryConfig?.numberOfRetries) {
-            const requestOptions = {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...customHeaders,
-                },
-                body: JSON.stringify(body),
-            };
-            try {
-                const response: any = await Promise.race([
-                    fetch(endpoint.endpoint, requestOptions),
-                    new Promise((resolve, reject) =>
-                        setTimeout(
-                            () => reject(new Error("timeout")),
-                            retryConfig?.timeout
-                        )
-                    ),
-                ]);
-                if (response.ok) {
-                    const res = await response.json();
-                    requestResponse.push({
-                        requestId: uuidv4(),
-                        eventId,
-                        endpointId: endpoint.endpointId,
-                        request: {
-                            endpoint: endpoint.endpoint,
-                            tries: retryCount + 1,
-                            ...requestOptions,
-                        },
-                        response: {
-                            response: res,
-                            status: res.status,
-                        },
-                        createdAt: new Date().toISOString(),
-                    });
-                    return {
-                        endpoint: endpoint.endpoint,
-                        response: body,
-                    };
-                } else {
-                    const res = await response.json();
-
-                    if (requestResponse.length >= index + 1) {
-                        requestResponse[index].response = {
-                            ...res,
-                        };
-                        requestResponse[index].request.tries = retryCount + 1;
-                    } else {
-                        requestResponse.push({
-                            requestId: uuidv4(),
-                            eventId,
-                            endpointId: endpoint.endpointId,
-                            request: {
-                                endpoint: endpoint.endpoint,
-                                tries: retryCount + 1,
-                                ...requestOptions,
-                            },
-                            response: {
-                                ...res,
-                            },
-                            createdAt: new Date().toISOString(),
-                        });
-                    }
-                    throw new Error(
-                        `Failed to fetch from ${endpoint.endpoint}. Status: ${response.status}`
-                    );
-                }
-            } catch (error: any) {
-                if (error.message === "timeout") {
-                    throw error;
-                }
-                retryCount++;
-                console.log(
-                    `Retrying ${endpoint.endpoint} (${retryCount}/${retryConfig?.numberOfRetries})`
-                );
-                if (retryCount < retryConfig?.numberOfRetries) {
-                    await new Promise((resolve) =>
-                        setTimeout(resolve, retryConfig?.retryInterval)
-                    );
-                } else {
-                    return error;
-                }
-            }
-        }
-    };
-
-    const results = await Promise.all(
-        customer.endpoints.map((endpoint: Endpoint, i: number) =>
-            callEndpoint(endpoint, i)
-        )
-    );
-
-    await env.EventsList.put(
-        eventId,
-        JSON.stringify({
-            customerId: configs.customerId,
-            eventId,
-            requests: requestResponse,
-            updatedAt: new Date().toISOString(),
-            tries: 1,
-        })
-    );
-
+    await env.touchless.send({
+        method: request.method,
+        body: await request.json(),
+        customer,
+    });
     return Response.json(
-        { results, requestResponse },
+        { success: true, message: "Requests added to queue" },
         {
             headers: { ...corsHeaders },
         }

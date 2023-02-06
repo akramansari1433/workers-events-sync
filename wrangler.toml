@@ -5,3 +5,10 @@ kv_namespaces = [
    { binding = "EventsList", id = "dd8a55a97e074446a969f1574e0d72cd", preview_id = "e2750e5587b54a7e9328b5533ce20af5" },
    { binding = "Customers", id = "3b9954795694439e9568b18b1a1e495f", preview_id = "c552eec5f8c747fb8dd6c6e05c0a464e" }
 ]
+[[queues.producers]]
+ queue = "touchless"
+ binding = "touchless"
+
+[[queues.consumers]] 
+ queue = "touchless"
+ max_batch_timeout = 5

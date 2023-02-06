@@ -1,6 +1,7 @@
 export interface Env {
     EventsList: KVNamespace;
     Customers: KVNamespace;
+    touchless: Queue;
 }
 
 export type RetryConfig = {

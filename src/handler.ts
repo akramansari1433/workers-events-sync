@@ -51,7 +51,7 @@ router.get("/events/:eventId/:requestId", getRequestDetails);
 router.post("/request/resend/:customerId/:endpointId", resendRequestCallback);
 
 // Resend bulk request
-router.post("/request/resendbulk/:customerId/:eventId", resendBulkRequestCallback);
+router.post("/request/resendbulk", resendBulkRequestCallback);
 
 // Resend bulk request websocket
 router.get("/ws/request/resendbulk", bulkRequestResend);

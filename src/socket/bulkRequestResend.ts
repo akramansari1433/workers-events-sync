@@ -53,7 +53,6 @@ export const bulkRequestResend = (request: IRequest, env: Env) => {
             request: RequestType
         ): Promise<any> => {
             const retryConfig: RetryConfig = endpoint.retryConfig;
-
             let retryCount = 0;
             let requestResponse: RequestType = {
                 requestId: "",
